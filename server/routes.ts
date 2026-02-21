@@ -6005,15 +6005,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     // Embed cash drawer kick BEFORE the cut command — Star and most ESC/POS printers
     // process commands sequentially, and some may discard bytes after a cut.
     // Sending the kick before cut ensures reliable drawer operation.
-    if (options?.workstationId && options?.isCashPayment) {
+    if (options?.workstationId) {
       try {
         const ws = await storage.getWorkstation(options.workstationId);
-        if (ws?.cashDrawerEnabled && ws?.cashDrawerAutoOpenOnCash) {
+        if (ws?.cashDrawerEnabled && ws?.cashDrawerAutoOpenOnCash && options?.isCashPayment) {
           const pin = ws.cashDrawerKickPin === "pin5" ? 0x01 : 0x00;
           const pulseDuration = Math.max(50, Math.min(500, ws.cashDrawerPulseDuration || 200));
           const pulseOn = Math.max(1, Math.min(255, Math.round(pulseDuration / 2)));
-          builder.raw(Buffer.from([0x1B, 0x70, pin, pulseOn, pulseOn]));
-          console.log(`Embedded cash drawer kick in receipt (before cut): pin=${ws.cashDrawerKickPin}, pulse=${pulseDuration}ms`);
+          builder.openCashDrawer(pin, pulseOn, pulseOn);
+          console.log(`Embedded cash drawer kick in receipt (before cut): pin=${ws.cashDrawerKickPin || 'pin2'}, pulse=${pulseDuration}ms`);
         }
       } catch (e) {
         console.error("Failed to embed drawer kick in receipt:", e);
@@ -22924,6 +22924,7 @@ connect();
       const printer = printerId ? await getPrinter(printerId) : null;
       const charWidth = printer?.characterWidth || 42;
       const receiptBuilder = await buildCheckReceipt(checkId, charWidth);
+      receiptBuilder.cut();
       const escPosData = receiptBuilder.toBase64();
       const plainTextData = receiptBuilder.toPlainText();
 

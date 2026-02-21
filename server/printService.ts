@@ -132,8 +132,8 @@ export class ESCPOSBuilder {
     return this;
   }
 
-  openCashDrawer(): this {
-    this.buffer.push(ESCPOS.CASH_DRAWER);
+  openCashDrawer(pin: number = 0x00, pulseOn: number = 0x19, pulseOff: number = 0xFA): this {
+    this.buffer.push(Buffer.from([0x1B, 0x70, pin, pulseOn, pulseOff]));
     return this;
   }
 
@@ -358,8 +358,6 @@ export async function buildCheckReceipt(checkId: string, charWidth: number = 42)
   
   builder.newLine();
   builder.line(formatDateTime(new Date(), tz));
-
-  builder.cut();
 
   return builder;
 }
