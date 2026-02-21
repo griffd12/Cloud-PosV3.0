@@ -5739,6 +5739,93 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             console.error(`[AutoPrint] Check #${check?.checkNumber} print error:`, printError);
             autoPrintStatus = { success: false, message: printError.message || "Print failed" };
           }
+
+          // Send standalone DRAWER_KICK WebSocket message to the print agent
+          // Only fires when auto-print succeeded and this was a cash payment
+          if (hasCashPayment && autoPrintStatus.success && (realWorkstationId || workstationId)) {
+            try {
+              const kickWsId = realWorkstationId || workstationId;
+              const ws = await storage.getWorkstation(kickWsId);
+              if (ws?.cashDrawerEnabled && ws?.cashDrawerAutoOpenOnCash) {
+                const drawerPrinterId = (ws as any).cashDrawerPrinterId || (ws as any).defaultReceiptPrinterId;
+                if (drawerPrinterId) {
+                  const printer = await storage.getPrinter(drawerPrinterId);
+                  if (printer) {
+                    const pin = ws.cashDrawerKickPin === "pin5" ? "pin5" : "pin2";
+                    const pulseDuration = Math.max(50, Math.min(500, ws.cashDrawerPulseDuration || 200));
+                    const isWindowsPrinter = (printer as any).connectionType === 'windows_printer' && (printer as any).windowsPrinterName;
+                    const isSerialPrinter = ((printer as any).connectionType === 'serial' || (printer as any).connectionType === 'usb') && (printer as any).comPort;
+
+                    let kickSent = false;
+
+                    if (isSerialPrinter || isWindowsPrinter) {
+                      const hostWsId = (printer as any).hostWorkstationId || kickWsId;
+                      const agent = await storage.getOnlinePrintAgentForWorkstation(hostWsId);
+                      if (agent) {
+                        const agentWs = connectedAgents.get(agent.id);
+                        if (agentWs && agentWs.readyState === WebSocket.OPEN) {
+                          const kickId = `autokick_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                          agentWs.send(JSON.stringify({
+                            type: "DRAWER_KICK",
+                            kickId,
+                            printerId: drawerPrinterId,
+                            connectionType: (printer as any).connectionType,
+                            comPort: (printer as any).comPort,
+                            baudRate: (printer as any).baudRate || 9600,
+                            windowsPrinterName: (printer as any).windowsPrinterName || null,
+                            pin,
+                            pulseDuration,
+                          }));
+                          kickSent = true;
+                          console.log(`[AutoKick] DRAWER_KICK sent via agent "${agent.name}" for WS "${ws.name}" (${(printer as any).connectionType}: ${(printer as any).windowsPrinterName || (printer as any).comPort}), kickId=${kickId}`);
+                        }
+                      }
+                      if (!kickSent) {
+                        console.log(`[AutoKick] No agent online for host workstation, skipping drawer kick for WS "${ws.name}"`);
+                      }
+                    } else if ((printer as any).connectionType === 'network') {
+                      const agent = await storage.getOnlinePrintAgentForWorkstation(kickWsId);
+                      if (agent) {
+                        const agentWs = connectedAgents.get(agent.id);
+                        if (agentWs && agentWs.readyState === WebSocket.OPEN) {
+                          const kickId = `autokick_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                          agentWs.send(JSON.stringify({
+                            type: "DRAWER_KICK",
+                            kickId,
+                            printerId: drawerPrinterId,
+                            printerIp: (printer as any).ipAddress || (printer as any).ip_address,
+                            printerPort: (printer as any).port || 9100,
+                            connectionType: 'network',
+                            pin,
+                            pulseDuration,
+                          }));
+                          kickSent = true;
+                          console.log(`[AutoKick] DRAWER_KICK sent via agent "${agent.name}" for WS "${ws.name}" (network: ${(printer as any).ipAddress}:${(printer as any).port || 9100}), kickId=${kickId}`);
+                        }
+                      }
+                      if (!kickSent) {
+                        console.log(`[AutoKick] No agent online for WS "${ws.name}", skipping network drawer kick`);
+                      }
+                    }
+                  } else {
+                    console.log(`[AutoKick] Drawer printer ${drawerPrinterId} not found for WS "${ws.name}"`);
+                  }
+                } else {
+                  console.log(`[AutoKick] No drawer printer configured for WS "${ws.name}"`);
+                }
+              } else {
+                const reasons: string[] = [];
+                if (!ws) reasons.push("workstation not found");
+                else {
+                  if (!ws.cashDrawerEnabled) reasons.push("cashDrawerEnabled=false");
+                  if (!ws.cashDrawerAutoOpenOnCash) reasons.push("autoOpenOnCash=false");
+                }
+                console.log(`[AutoKick] SKIPPED for WS "${ws?.name || kickWsId}": ${reasons.join(", ")}`);
+              }
+            } catch (kickErr: any) {
+              console.error(`[AutoKick] Error sending drawer kick:`, kickErr.message);
+            }
+          }
         }
         
         const closedResponseData = { ...updatedCheck, paidAmount, autoPrintStatus };

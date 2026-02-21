@@ -340,6 +340,25 @@ class PrintAgentService {
 
     printLogger.info('Job', `Received job ${jobId}`, { printer: windowsPrinterName || printerIp || comPort || printerId || 'default', connectionType });
 
+    // Detect embedded ESC/POS drawer kick bytes (0x1B 0x70) in print data
+    try {
+      const rawBuf = Buffer.from(printData, 'base64');
+      let kickCount = 0;
+      for (let i = 0; i < rawBuf.length - 1; i++) {
+        if (rawBuf[i] === 0x1B && rawBuf[i + 1] === 0x70) {
+          const pinByte = i + 2 < rawBuf.length ? rawBuf[i + 2] : -1;
+          const pinLabel = pinByte === 0x00 ? 'pin2' : pinByte === 0x01 ? 'pin5' : `0x${pinByte.toString(16)}`;
+          printLogger.info('Job', `DRAWER KICK BYTES DETECTED in job ${jobId} at offset ${i}: pin=${pinLabel}`, { printer: windowsPrinterName || printerIp || comPort || 'default' });
+          kickCount++;
+        }
+      }
+      if (kickCount === 0 && rawBuf.length < 100) {
+        printLogger.info('Job', `No drawer kick bytes in job ${jobId} (${rawBuf.length} bytes)`);
+      }
+    } catch (scanErr) {
+      printLogger.warn('Job', `Could not scan job ${jobId} for drawer kick bytes: ${scanErr.message}`);
+    }
+
     try {
       this.ws.send(JSON.stringify({ type: 'ACK', jobId }));
     } catch (e) {}
