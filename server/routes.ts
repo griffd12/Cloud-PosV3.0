@@ -5364,7 +5364,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const idempotencyKey = req.headers['idempotency-key'] as string | undefined;
       const enterpriseId = req.headers['x-enterprise-id'] as string || 'default';
-      const workstationId = req.headers['x-workstation-id'] as string || 'default';
+      const realWorkstationId = req.headers['x-workstation-id'] as string | undefined;
+      const workstationId = realWorkstationId || 'default';
 
       if (idempotencyKey) {
         const requestHash = crypto.createHash('sha256').update(JSON.stringify({ method: req.method, path: req.path, body: req.body })).digest('hex');
@@ -5718,23 +5719,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         broadcastCheckUpdate(checkId, "closed", check?.rvcId);
         broadcastPaymentUpdate(checkId);
         
-        // Auto-print receipt on check close (skip for stress test checks)
-        // Include cash drawer kick bytes in the receipt if this was a cash payment
         const hasCashPayment = tender?.type === "cash";
         let autoPrintStatus: { success: boolean; message?: string } = { success: false };
         if (!check?.testMode) {
           try {
+            console.log(`[AutoPrint] Check #${check?.checkNumber} closing | tender="${tender?.name}" type="${tender?.type}" | hasCash=${hasCashPayment} | wsHeader="${realWorkstationId}" | wsId="${workstationId}"`);
             const printResult = await printCheckReceipt(checkId, check?.rvcId, {
-              workstationId: workstationId || undefined,
+              workstationId: realWorkstationId || undefined,
               isCashPayment: hasCashPayment,
             });
             if (printResult) {
               autoPrintStatus = { success: true };
+              console.log(`[AutoPrint] Check #${check?.checkNumber} print result: ${printResult.status} via "${printResult.printer}"`);
             } else {
               autoPrintStatus = { success: false, message: "No receipt printer configured" };
+              console.log(`[AutoPrint] Check #${check?.checkNumber} no printer found`);
             }
           } catch (printError: any) {
-            console.error("Auto-print receipt error:", printError);
+            console.error(`[AutoPrint] Check #${check?.checkNumber} print error:`, printError);
             autoPrintStatus = { success: false, message: printError.message || "Print failed" };
           }
         }
@@ -6008,16 +6010,28 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (options?.workstationId) {
       try {
         const ws = await storage.getWorkstation(options.workstationId);
+        console.log(`[DrawerEmbed] wsId="${options.workstationId}" wsFound=${!!ws} wsName="${ws?.name || 'N/A'}" drawerEnabled=${ws?.cashDrawerEnabled} autoOpen=${ws?.cashDrawerAutoOpenOnCash} isCash=${options?.isCashPayment}`);
         if (ws?.cashDrawerEnabled && ws?.cashDrawerAutoOpenOnCash && options?.isCashPayment) {
           const pin = ws.cashDrawerKickPin === "pin5" ? 0x01 : 0x00;
           const pulseDuration = Math.max(50, Math.min(500, ws.cashDrawerPulseDuration || 200));
           const pulseOn = Math.max(1, Math.min(255, Math.round(pulseDuration / 2)));
           builder.openCashDrawer(pin, pulseOn, pulseOn);
-          console.log(`Embedded cash drawer kick in receipt (before cut): pin=${ws.cashDrawerKickPin || 'pin2'}, pulse=${pulseDuration}ms`);
+          console.log(`[DrawerEmbed] KICK EMBEDDED in receipt for WS "${ws.name}": pin=${ws.cashDrawerKickPin || 'pin2'}, pulse=${pulseDuration}ms`);
+        } else {
+          const reasons: string[] = [];
+          if (!ws) reasons.push("workstation not found");
+          else {
+            if (!ws.cashDrawerEnabled) reasons.push("cashDrawerEnabled=false");
+            if (!ws.cashDrawerAutoOpenOnCash) reasons.push("cashDrawerAutoOpenOnCash=false");
+          }
+          if (!options?.isCashPayment) reasons.push("not a cash payment");
+          console.log(`[DrawerEmbed] SKIPPED kick: ${reasons.join(", ")}`);
         }
       } catch (e) {
-        console.error("Failed to embed drawer kick in receipt:", e);
+        console.error("[DrawerEmbed] Failed to embed drawer kick in receipt:", e);
       }
+    } else {
+      console.log(`[DrawerEmbed] SKIPPED: no workstationId provided in options`);
     }
 
     const buffer = builder.cut().build();
