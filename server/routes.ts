@@ -20579,7 +20579,9 @@ connect();
       const connectedAgentsMap = (app as any).connectedAgents as Map<string, WebSocket>;
       let sent = false;
 
-      if (isSerialPrinter) {
+      const isWindowsPrinter = (printer as any).connectionType === 'windows_printer' && (printer as any).windowsPrinterName;
+
+      if (isSerialPrinter || isWindowsPrinter) {
         const hostWsId = (printer as any).hostWorkstationId || workstationId;
         const agent = await storage.getOnlinePrintAgentForWorkstation(hostWsId);
         if (agent) {
@@ -20593,11 +20595,12 @@ connect();
               connectionType: (printer as any).connectionType,
               comPort: (printer as any).comPort,
               baudRate: (printer as any).baudRate || 9600,
+              windowsPrinterName: (printer as any).windowsPrinterName || null,
               pin,
               pulseDuration,
             }));
             sent = true;
-            console.log(`Cash drawer kick sent via serial agent ${agent.name} for workstation ${workstation.name} on ${(printer as any).comPort}`);
+            console.log(`Cash drawer kick sent via agent ${agent.name} for workstation ${workstation.name} (${(printer as any).connectionType}: ${(printer as any).windowsPrinterName || (printer as any).comPort})`);
           }
         }
       }
@@ -20617,6 +20620,7 @@ connect();
               connectionType: (printer as any).connectionType || 'network',
               comPort: (printer as any).comPort || null,
               baudRate: (printer as any).baudRate || null,
+              windowsPrinterName: (printer as any).windowsPrinterName || null,
               pin,
               pulseDuration,
             }));
