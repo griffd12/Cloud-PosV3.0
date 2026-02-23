@@ -3900,8 +3900,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/tenders", async (req, res) => {
     try {
       const validated = insertTenderSchema.parse(req.body);
-      if ((validated.type === "credit" || validated.type === "debit") && !validated.paymentProcessorId) {
-        return res.status(400).json({ message: "Credit and debit tenders require a linked payment processor for gateway integration." });
+      if (validated.requiresPaymentProcessor && !validated.paymentProcessorId) {
+        return res.status(400).json({ message: "Tenders that require a payment processor must have one linked." });
       }
       const data = await storage.createTender(validated);
       broadcastConfigUpdate("tenders", "create", data.id, data.enterpriseId);
@@ -3914,11 +3914,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.put("/api/tenders/:id", async (req, res) => {
     try {
       const body = req.body;
-      const tenderType = body.type;
-      if ((tenderType === "credit" || tenderType === "debit") && !body.paymentProcessorId) {
-        return res.status(400).json({ message: "Credit and debit tenders require a linked payment processor for gateway integration." });
+      const existing = await storage.getTender(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Not found" });
+      const effectiveRequiresProcessor = body.requiresPaymentProcessor ?? existing.requiresPaymentProcessor;
+      if (effectiveRequiresProcessor && !body.paymentProcessorId && !existing.paymentProcessorId) {
+        return res.status(400).json({ message: "Tenders that require a payment processor must have one linked." });
       }
-      if (tenderType && tenderType !== "credit" && tenderType !== "debit") {
+      if (effectiveRequiresProcessor === false) {
         body.paymentProcessorId = null;
       }
       const data = await storage.updateTender(req.params.id, body);
@@ -5390,7 +5392,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       let resolvedDrawerAssignmentId: string | null = drawerAssignmentId || null;
       let resolvedDrawerId: string | null = null;
 
-      if (tender.type === "cash") {
+      if (tender.popDrawer) {
         if (!drawerAssignmentId) {
           const checkForDrawer = await storage.getCheck(checkId);
           if (checkForDrawer) {
@@ -5474,7 +5476,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       }
 
-      if (tender.type === "cash" && resolvedDrawerAssignmentId && resolvedDrawerId && businessDate) {
+      if (tender.popDrawer && resolvedDrawerAssignmentId && resolvedDrawerId && businessDate) {
         try {
           const rvcForProp = await storage.getRvc(checkForBiz?.rvcId || "");
           await storage.createCashTransaction({
@@ -5719,11 +5721,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         broadcastCheckUpdate(checkId, "closed", check?.rvcId);
         broadcastPaymentUpdate(checkId);
         
-        const hasCashPayment = tender?.type === "cash";
+        const hasCashPayment = tender?.popDrawer === true;
         let autoPrintStatus: { success: boolean; message?: string } = { success: false };
         if (!check?.testMode) {
           try {
-            console.log(`[AutoPrint] Check #${check?.checkNumber} closing | tender="${tender?.name}" type="${tender?.type}" | hasCash=${hasCashPayment} | wsHeader="${realWorkstationId}" | wsId="${workstationId}"`);
+            console.log(`[AutoPrint] Check #${check?.checkNumber} closing | tender="${tender?.name}" popDrawer=${tender?.popDrawer} | hasCash=${hasCashPayment} | wsHeader="${realWorkstationId}" | wsId="${workstationId}"`);
             const printResult = await printCheckReceipt(checkId, check?.rvcId, {
               workstationId: realWorkstationId || undefined,
               isCashPayment: hasCashPayment,
@@ -7003,7 +7005,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         if (proportionalRefund <= 0) continue;
 
         const tender = await storage.getTender(payment.tenderId);
-        const isCardTender = tender && tender.type === "credit";
+        const isCardTender = tender && tender.requiresPaymentProcessor === true;
         const processorId = tender?.paymentProcessorId || null;
         let resolvedPaymentTransactionId = payment.paymentTransactionId;
         
@@ -7085,9 +7087,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           gatewayMessage = "No payment transaction linked — manual refund required";
           refundMethod = "manual";
         } else {
-          // Cash, gift, or other non-card tender — no gateway call needed
+          // Non-card tender — no gateway call needed
           gatewayStatus = "not_applicable";
-          gatewayMessage = `${tender?.type || "other"} tender - manual refund`;
+          gatewayMessage = `${tender?.name || "other"} tender - manual refund`;
           refundMethod = "manual";
         }
 
@@ -7135,7 +7137,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       for (const rp of refundPaymentsData) {
         const rpTender = await storage.getTender(rp.tenderId);
-        if (rpTender?.type === "cash") {
+        if (rpTender?.popDrawer) {
           const rvcForCash = await storage.getRvc(rvcId);
           if (rvcForCash?.propertyId) {
             const assignments = await storage.getDrawerAssignments(rvcForCash.propertyId);
@@ -10538,9 +10540,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             employeeData[empId].tips += parseFloat(payment.tipAmount || "0");
             
             const tender = tenders.find(t => t.id === payment.tenderId);
-            if (tender?.type === "cash") {
+            if (tender?.popDrawer) {
               employeeData[empId].cashCollected += appliedAmount;
-            } else if (tender?.type === "credit" || tender?.type === "debit") {
+            } else if (tender?.requiresPaymentProcessor) {
               employeeData[empId].creditCollected += appliedAmount;
             } else {
               employeeData[empId].otherCollected += appliedAmount;

@@ -240,8 +240,8 @@ export function PaymentModal({
     (t) => !t.workstationId || t.workstationId !== workstationId
   );
 
-  const cashTender = tenders.find((t) => t.type === "cash");
-  const nonCashTenders = tenders.filter((t) => t.type !== "cash");
+  const cashTender = tenders.find((t) => t.popDrawer === true);
+  const nonCashTenders = tenders.filter((t) => t.popDrawer !== true);
   
   const showChangeDueScreen = changeDue !== null && changeDue > 0;
 
@@ -930,7 +930,7 @@ export function PaymentModal({
 
   const handleNonCashExact = (tender: Tender) => {
     // Check if this is a credit/debit tender that needs card entry
-    if (tender.type === "credit" || tender.type === "debit") {
+    if (tender.requiresPaymentProcessor) {
       setCardTender(tender);
       setCardPaymentAmount(remainingBalance.toFixed(2));
       setCardPaymentStep("amount");
@@ -949,7 +949,7 @@ export function PaymentModal({
     const amount = parseFloat(tenderAmount);
     if (selectedTender && amount > 0) {
       // Check if this is a credit/debit tender that needs card entry
-      if (selectedTender.type === "credit" || selectedTender.type === "debit") {
+      if (selectedTender.requiresPaymentProcessor) {
         setCardTender(selectedTender);
         setCardPaymentAmount(amount.toFixed(2));
         setCardPaymentStep("amount");
@@ -2525,7 +2525,7 @@ export function PaymentModal({
               {nonCashTenders.map((tender) => {
                 const Icon = TENDER_ICONS[tender.type] || DollarSign;
                 const isSelected = selectedTender?.id === tender.id;
-                const isCardTender = tender.type === "credit" || tender.type === "debit";
+                const isCardTender = tender.requiresPaymentProcessor === true;
                 
                 return (
                   <div key={tender.id} className="space-y-2">

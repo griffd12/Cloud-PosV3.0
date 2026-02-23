@@ -852,7 +852,7 @@ export default function PosPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/checks/open"] });
 
       const appliedTender = tenders.find(t => t.id === result.appliedTenderId);
-      const isCashTender = appliedTender?.type === "cash";
+      const isCashTender = appliedTender?.popDrawer === true;
       const shouldKickDrawer = isCashTender && wsContext?.workstation?.cashDrawerAutoOpenOnCash;
       if (shouldKickDrawer && result.status !== "closed") {
         triggerCashDrawerKick();
