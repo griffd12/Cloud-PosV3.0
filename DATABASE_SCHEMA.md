@@ -4101,3 +4101,30 @@ Enterprise
               └── CAL Deployments
                     └── CAL Deployment Targets (→ Properties, Workstations, Service Hosts)
 ```
+
+---
+
+## emc_option_flags
+
+Generic key-value option flags supporting scope-based inheritance (Enterprise → Property → RVC → Workstation). Used for configuration-driven behavior flags that don't warrant dedicated schema columns.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | varchar (PK) | UUID default | Unique flag record ID |
+| enterprise_id | varchar | NOT NULL, FK → enterprises | Owning enterprise |
+| entity_type | varchar | NOT NULL | Entity kind (e.g. "tender", "rvc", "menu_item") |
+| entity_id | varchar | NOT NULL | ID of the entity this flag applies to |
+| option_key | varchar | NOT NULL | Flag name (e.g. "popDrawer", "requireSignature") |
+| value_text | text | NULL | Flag value stored as text ("true"/"false" for booleans, arbitrary text/numbers) |
+| scope_level | varchar | NOT NULL | Scope at which this flag is set: "enterprise", "property", "rvc", or "workstation" |
+| scope_id | varchar | NOT NULL | ID of the scope entity (enterprise/property/rvc/workstation ID) |
+| created_at | timestamp | NOT NULL, default now() | Record creation time |
+| updated_at | timestamp | NOT NULL, default now() | Last update time |
+
+**Unique Constraint**: (enterprise_id, entity_type, entity_id, option_key, scope_level, scope_id)
+
+**Indexes**:
+- idx_option_flags_entity: (enterprise_id, entity_type, entity_id)
+- idx_option_flags_scope: (enterprise_id, scope_level, scope_id)
+
+**Inheritance Resolution**: Most-specific scope wins (workstation > rvc > property > enterprise). Runtime uses batch loading with 60-second in-memory cache.

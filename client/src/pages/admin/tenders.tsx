@@ -11,6 +11,7 @@ import { getScopeColumn, getZoneColumn, getInheritanceColumn } from "@/component
 import { useScopeLookup } from "@/hooks/use-scope-lookup";
 import { insertTenderSchema, type Tender, type InsertTender } from "@shared/schema";
 import { useConfigOverride } from "@/hooks/use-config-override";
+import { OptionBitsPanel } from "@/components/admin/option-bits-panel";
 
 interface PaymentProcessor {
   id: string;
@@ -184,6 +185,24 @@ export default function TendersPage() {
         searchPlaceholder="Search tenders..."
         emptyMessage="No tenders configured"
       />
+
+      {editingItem && selectedEnterpriseId && (
+        <div className="mt-4">
+          <OptionBitsPanel
+            entityType="tender"
+            entityId={editingItem.id}
+            enterpriseId={selectedEnterpriseId}
+            currentScopeLevel={selectedRvcId ? "rvc" : selectedPropertyId ? "property" : "enterprise"}
+            currentScopeId={selectedRvcId || selectedPropertyId || selectedEnterpriseId}
+            scopeChain={[
+              { level: "enterprise", id: selectedEnterpriseId },
+              ...(selectedPropertyId ? [{ level: "property", id: selectedPropertyId }] : []),
+              ...(selectedRvcId ? [{ level: "rvc", id: selectedRvcId }] : []),
+            ]}
+            scopeLabel={`Editing at ${selectedRvcId ? "RVC" : selectedPropertyId ? "Property" : "Enterprise"} scope`}
+          />
+        </div>
+      )}
 
       <EntityForm
         open={formOpen}

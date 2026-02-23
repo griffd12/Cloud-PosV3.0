@@ -15,6 +15,7 @@ import { queryClient, apiRequest, getAuthHeaders } from "@/lib/queryClient";
 import { useEmcFilter } from "@/lib/emc-context";
 import { insertRvcSchema, type Rvc, type InsertRvc, type Property, ORDER_TYPES, DOM_SEND_MODES } from "@shared/schema";
 import { FileText, Save, Loader2 } from "lucide-react";
+import { OptionBitsPanel } from "@/components/admin/option-bits-panel";
 
 const MAX_HEADER_LINES = 16;
 const MAX_TRAILER_LINES = 16;
@@ -561,6 +562,21 @@ export default function RvcsPage() {
             </form>
           </CardContent>
         </Card>
+
+        {editingItem && selectedEnterpriseId && (
+          <OptionBitsPanel
+            entityType="rvc"
+            entityId={editingItem.id}
+            enterpriseId={selectedEnterpriseId}
+            currentScopeLevel={contextPropertyId ? "property" : "enterprise"}
+            currentScopeId={contextPropertyId || selectedEnterpriseId}
+            scopeChain={[
+              { level: "enterprise", id: selectedEnterpriseId },
+              ...(contextPropertyId ? [{ level: "property", id: contextPropertyId }] : []),
+            ]}
+            scopeLabel={`Editing at ${contextPropertyId ? "Property" : "Enterprise"} scope`}
+          />
+        )}
       </div>
     );
   }

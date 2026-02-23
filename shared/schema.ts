@@ -3899,3 +3899,28 @@ export const idempotencyKeys = pgTable("idempotency_keys", {
 
 export type IdempotencyKey = typeof idempotencyKeys.$inferSelect;
 export type InsertIdempotencyKey = typeof idempotencyKeys.$inferInsert;
+
+// ============================================================================
+// EMC OPTION FLAGS (Generic OptionBits System)
+// ============================================================================
+
+export const emcOptionFlags = pgTable("emc_option_flags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  enterpriseId: varchar("enterprise_id").notNull().references(() => enterprises.id),
+  entityType: text("entity_type").notNull(),
+  entityId: varchar("entity_id").notNull(),
+  optionKey: text("option_key").notNull(),
+  valueText: text("value_text"),
+  scopeLevel: text("scope_level").notNull(),
+  scopeId: varchar("scope_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("idx_emc_option_flags_unique").on(table.enterpriseId, table.entityType, table.entityId, table.optionKey, table.scopeLevel, table.scopeId),
+  index("idx_emc_option_flags_entity").on(table.enterpriseId, table.entityType, table.entityId),
+  index("idx_emc_option_flags_key").on(table.enterpriseId, table.optionKey),
+]);
+
+export const insertEmcOptionFlagSchema = createInsertSchema(emcOptionFlags).omit({ id: true, createdAt: true, updatedAt: true });
+export type EmcOptionFlag = typeof emcOptionFlags.$inferSelect;
+export type InsertEmcOptionFlag = z.infer<typeof insertEmcOptionFlagSchema>;

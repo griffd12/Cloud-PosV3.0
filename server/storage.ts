@@ -168,6 +168,8 @@ import {
   type CalPackagePrerequisite, type InsertCalPackagePrerequisite,
   type CalDeployment, type InsertCalDeployment,
   type CalDeploymentTarget, type InsertCalDeploymentTarget,
+  emcOptionFlags,
+  type EmcOptionFlag, type InsertEmcOptionFlag,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -968,6 +970,14 @@ export interface IStorage {
   createCalDeploymentTarget(data: InsertCalDeploymentTarget): Promise<CalDeploymentTarget>;
   updateCalDeploymentTarget(id: string, data: Partial<InsertCalDeploymentTarget>): Promise<CalDeploymentTarget | undefined>;
   updateCalDeploymentTargetStatus(id: string, status: string, statusMessage?: string): Promise<CalDeploymentTarget | undefined>;
+
+  // EMC Option Flags
+  getOptionFlags(enterpriseId: string, entityType: string, entityId: string): Promise<EmcOptionFlag[]>;
+  getOptionFlag(enterpriseId: string, entityType: string, entityId: string, optionKey: string, scopeLevel: string, scopeId: string): Promise<EmcOptionFlag | undefined>;
+  setOptionFlag(data: InsertEmcOptionFlag): Promise<EmcOptionFlag>;
+  deleteOptionFlag(id: string): Promise<boolean>;
+  deleteOptionFlagByKey(enterpriseId: string, entityType: string, entityId: string, optionKey: string, scopeLevel: string, scopeId: string): Promise<boolean>;
+  listOptionFlagsByScope(enterpriseId: string, scopeLevel: string, scopeId: string): Promise<EmcOptionFlag[]>;
 }
 
 function sanitizeDates<T extends Record<string, any>>(data: T): T {
@@ -6671,6 +6681,85 @@ export class DatabaseStorage implements IStorage {
       .where(eq(calDeploymentTargets.id, id))
       .returning();
     return result;
+  }
+
+  // ============================================================================
+  // EMC OPTION FLAGS
+  // ============================================================================
+
+  async getOptionFlags(enterpriseId: string, entityType: string, entityId: string): Promise<EmcOptionFlag[]> {
+    return db.select().from(emcOptionFlags).where(
+      and(
+        eq(emcOptionFlags.enterpriseId, enterpriseId),
+        eq(emcOptionFlags.entityType, entityType),
+        eq(emcOptionFlags.entityId, entityId)
+      )
+    );
+  }
+
+  async getOptionFlag(
+    enterpriseId: string, entityType: string, entityId: string,
+    optionKey: string, scopeLevel: string, scopeId: string
+  ): Promise<EmcOptionFlag | undefined> {
+    const [row] = await db.select().from(emcOptionFlags).where(
+      and(
+        eq(emcOptionFlags.enterpriseId, enterpriseId),
+        eq(emcOptionFlags.entityType, entityType),
+        eq(emcOptionFlags.entityId, entityId),
+        eq(emcOptionFlags.optionKey, optionKey),
+        eq(emcOptionFlags.scopeLevel, scopeLevel),
+        eq(emcOptionFlags.scopeId, scopeId)
+      )
+    );
+    return row;
+  }
+
+  async setOptionFlag(data: InsertEmcOptionFlag): Promise<EmcOptionFlag> {
+    const existing = await this.getOptionFlag(
+      data.enterpriseId, data.entityType, data.entityId,
+      data.optionKey, data.scopeLevel, data.scopeId
+    );
+    if (existing) {
+      const [updated] = await db.update(emcOptionFlags)
+        .set({ valueText: data.valueText, updatedAt: new Date() })
+        .where(eq(emcOptionFlags.id, existing.id))
+        .returning();
+      return updated;
+    }
+    const [created] = await db.insert(emcOptionFlags).values(sanitizeDates(data)).returning();
+    return created;
+  }
+
+  async deleteOptionFlag(id: string): Promise<boolean> {
+    const result = await db.delete(emcOptionFlags).where(eq(emcOptionFlags.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async deleteOptionFlagByKey(
+    enterpriseId: string, entityType: string, entityId: string,
+    optionKey: string, scopeLevel: string, scopeId: string
+  ): Promise<boolean> {
+    const result = await db.delete(emcOptionFlags).where(
+      and(
+        eq(emcOptionFlags.enterpriseId, enterpriseId),
+        eq(emcOptionFlags.entityType, entityType),
+        eq(emcOptionFlags.entityId, entityId),
+        eq(emcOptionFlags.optionKey, optionKey),
+        eq(emcOptionFlags.scopeLevel, scopeLevel),
+        eq(emcOptionFlags.scopeId, scopeId)
+      )
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async listOptionFlagsByScope(enterpriseId: string, scopeLevel: string, scopeId: string): Promise<EmcOptionFlag[]> {
+    return db.select().from(emcOptionFlags).where(
+      and(
+        eq(emcOptionFlags.enterpriseId, enterpriseId),
+        eq(emcOptionFlags.scopeLevel, scopeLevel),
+        eq(emcOptionFlags.scopeId, scopeId)
+      )
+    );
   }
 }
 

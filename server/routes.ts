@@ -72,6 +72,7 @@ import {
   type PrintAgentMessage,
   type PrintAgentResponse,
 } from "./printService";
+import { bustOptionBitsCache } from "./config/optionBits";
 
 const clients: Map<string, Set<WebSocket>> = new Map();
 
@@ -25464,6 +25465,99 @@ connect();
     } catch (error: any) {
       console.error("Error fetching overrides:", error);
       res.status(500).json({ message: error.message || "Failed to fetch overrides" });
+    }
+  });
+
+  // ============================================================================
+  // EMC OPTION FLAGS (Generic OptionBits CRUD)
+  // ============================================================================
+
+  app.get("/api/option-flags", async (req, res) => {
+    try {
+      const enforcedEnterpriseId = await getEnforcedEnterpriseId(req);
+      const { enterpriseId: reqEnterpriseId, entityType, entityId, scopeLevel, scopeId } = req.query as Record<string, string | undefined>;
+      const enterpriseId = enforcedEnterpriseId || reqEnterpriseId;
+      if (!enterpriseId) {
+        return res.status(400).json({ message: "enterpriseId is required" });
+      }
+
+      if (entityType && entityId) {
+        const flags = await storage.getOptionFlags(enterpriseId, entityType, entityId);
+        return res.json(flags);
+      }
+
+      if (scopeLevel && scopeId) {
+        const flags = await storage.listOptionFlagsByScope(enterpriseId, scopeLevel, scopeId);
+        return res.json(flags);
+      }
+
+      res.status(400).json({ message: "Provide entityType+entityId or scopeLevel+scopeId" });
+    } catch (error: any) {
+      console.error("Error fetching option flags:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch option flags" });
+    }
+  });
+
+  app.put("/api/option-flags", async (req, res) => {
+    try {
+      const enforcedEnterpriseId = await getEnforcedEnterpriseId(req);
+      const { enterpriseId: reqEnterpriseId, entityType, entityId, optionKey, valueText, scopeLevel, scopeId } = req.body;
+      const enterpriseId = enforcedEnterpriseId || reqEnterpriseId;
+      if (!enterpriseId || !entityType || !entityId || !optionKey || !scopeLevel || !scopeId) {
+        return res.status(400).json({ message: "Missing required fields: enterpriseId, entityType, entityId, optionKey, scopeLevel, scopeId" });
+      }
+
+      const flag = await storage.setOptionFlag({
+        enterpriseId,
+        entityType,
+        entityId,
+        optionKey,
+        valueText: valueText ?? null,
+        scopeLevel,
+        scopeId,
+      });
+
+      bustOptionBitsCache();
+      broadcastConfigUpdate(entityType, "update", entityId, enterpriseId);
+
+      res.json(flag);
+    } catch (error: any) {
+      console.error("Error setting option flag:", error);
+      res.status(500).json({ message: error.message || "Failed to set option flag" });
+    }
+  });
+
+  app.delete("/api/option-flags", async (req, res) => {
+    try {
+      const enforcedEnterpriseId = await getEnforcedEnterpriseId(req);
+      const { enterpriseId: reqEnterpriseId, entityType, entityId, optionKey, scopeLevel, scopeId } = req.body;
+      const enterpriseId = enforcedEnterpriseId || reqEnterpriseId;
+      if (!enterpriseId || !entityType || !entityId || !optionKey || !scopeLevel || !scopeId) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const deleted = await storage.deleteOptionFlagByKey(enterpriseId, entityType, entityId, optionKey, scopeLevel, scopeId);
+
+      bustOptionBitsCache();
+      broadcastConfigUpdate(entityType, "delete", entityId, enterpriseId);
+
+      res.json({ deleted });
+    } catch (error: any) {
+      console.error("Error deleting option flag:", error);
+      res.status(500).json({ message: error.message || "Failed to delete option flag" });
+    }
+  });
+
+  app.delete("/api/option-flags/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteOptionFlag(req.params.id);
+
+      bustOptionBitsCache();
+
+      res.json({ deleted });
+    } catch (error: any) {
+      console.error("Error deleting option flag:", error);
+      res.status(500).json({ message: error.message || "Failed to delete option flag" });
     }
   });
 
