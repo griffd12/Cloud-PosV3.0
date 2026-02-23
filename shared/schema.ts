@@ -48,6 +48,11 @@ export const rvcs = pgTable("rvcs", {
   domSendMode: text("dom_send_mode").default("fire_on_fly"), // 'fire_on_fly', 'fire_on_next', 'fire_on_tender'
   conversationalOrderingEnabled: boolean("conversational_ordering_enabled").default(false), // Enable MICROS RES 3700-style conversational ordering
   active: boolean("active").default(true),
+  receiptPrintMode: text("receipt_print_mode").default("auto_on_close"),
+  receiptCopies: integer("receipt_copies").default(1),
+  kitchenPrintMode: text("kitchen_print_mode").default("auto_on_send"),
+  voidReceiptPrint: boolean("void_receipt_print").default(true),
+  requireGuestCount: boolean("require_guest_count").default(false),
 });
 
 // Hierarchy relations
