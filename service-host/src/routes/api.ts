@@ -689,6 +689,17 @@ export function createApiRoutes(
     }
   });
   
+  // Get EMC option flags
+  router.get('/api/option-flags', (req, res) => {
+    try {
+      const enterpriseId = req.query.enterpriseId as string | undefined;
+      const flags = config.getOptionFlags(enterpriseId);
+      res.json(flags);
+    } catch (e) {
+      res.status(500).json({ error: (e as Error).message });
+    }
+  });
+  
   // Get job codes
   router.get('/config/job-codes', (req, res) => {
     try {

@@ -14,7 +14,7 @@
 // CONFIGURATION TABLES (Synced from cloud)
 // =============================================================================
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const CREATE_SCHEMA_SQL = `
 -- Schema version tracking
@@ -62,6 +62,11 @@ CREATE TABLE IF NOT EXISTS rvcs (
   dynamic_order_mode INTEGER DEFAULT 0,
   dom_send_mode TEXT DEFAULT 'fire_on_fly',
   active INTEGER DEFAULT 1,
+  receipt_print_mode TEXT DEFAULT 'auto_on_close',
+  receipt_copies INTEGER DEFAULT 1,
+  kitchen_print_mode TEXT DEFAULT 'auto_on_send',
+  void_receipt_print INTEGER DEFAULT 1,
+  require_guest_count INTEGER DEFAULT 0,
   updated_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -407,6 +412,17 @@ CREATE TABLE IF NOT EXISTS tenders (
   code TEXT NOT NULL,
   type TEXT NOT NULL,
   payment_processor_id TEXT,
+  is_system INTEGER DEFAULT 0,
+  pop_drawer INTEGER DEFAULT 0,
+  allow_tips INTEGER DEFAULT 0,
+  allow_over_tender INTEGER DEFAULT 0,
+  print_check_on_payment INTEGER DEFAULT 1,
+  require_manager_approval INTEGER DEFAULT 0,
+  requires_payment_processor INTEGER DEFAULT 0,
+  display_order INTEGER DEFAULT 0,
+  is_cash_media INTEGER DEFAULT 0,
+  is_card_media INTEGER DEFAULT 0,
+  is_gift_media INTEGER DEFAULT 0,
   active INTEGER DEFAULT 1,
   updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -1293,6 +1309,30 @@ CREATE TABLE IF NOT EXISTS config_cache (
   version INTEGER DEFAULT 1,
   updated_at TEXT DEFAULT (datetime('now'))
 );
+
+-- =============================================================================
+-- EMC OPTION FLAGS (OptionBits)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS emc_option_flags (
+  id TEXT PRIMARY KEY,
+  enterprise_id TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  option_key TEXT NOT NULL,
+  value_text TEXT,
+  scope_level TEXT NOT NULL,
+  scope_id TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_emc_option_flags_unique
+  ON emc_option_flags (enterprise_id, entity_type, entity_id, option_key, scope_level, scope_id);
+CREATE INDEX IF NOT EXISTS idx_emc_option_flags_entity
+  ON emc_option_flags (enterprise_id, entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_emc_option_flags_key
+  ON emc_option_flags (enterprise_id, option_key);
 
 -- =============================================================================
 -- INDEXES

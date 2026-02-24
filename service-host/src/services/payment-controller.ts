@@ -155,12 +155,16 @@ export class PaymentController {
     if (!row) return null;
     
     const reference = row.reference ? JSON.parse(row.reference) : {};
+    const tender = this.db.getTender(row.tender_id);
     
     return {
       id: row.id,
       checkId: row.check_id,
       tenderId: row.tender_id,
       tenderType: row.tender_type,
+      isCashMedia: tender?.is_cash_media === 1,
+      isCardMedia: tender?.is_card_media === 1,
+      isGiftMedia: tender?.is_gift_media === 1,
       amount: row.amount,
       tip: row.tip,
       authCode: reference.authCode,
@@ -180,11 +184,15 @@ export class PaymentController {
     
     return rows.map(row => {
       const reference = row.reference ? JSON.parse(row.reference) : {};
+      const tender = this.db.getTender(row.tender_id);
       return {
         id: row.id,
         checkId: row.check_id,
         tenderId: row.tender_id,
         tenderType: row.tender_type,
+        isCashMedia: tender?.is_cash_media === 1,
+        isCardMedia: tender?.is_card_media === 1,
+        isGiftMedia: tender?.is_gift_media === 1,
         amount: row.amount,
         tip: row.tip,
         authCode: reference.authCode,
@@ -282,7 +290,10 @@ interface PaymentRecord {
   id: string;
   checkId: string;
   tenderId: string;
-  tenderType: string;
+  tenderType: string; // display/label only, not used for behavioral logic
+  isCashMedia?: boolean;
+  isCardMedia?: boolean;
+  isGiftMedia?: boolean;
   amount: number;
   tip: number;
   authCode?: string;

@@ -285,6 +285,8 @@ export class CapsService {
     
     const id = randomUUID();
     
+    const tender = this.db.getTender(params.tenderId);
+    
     this.db.run(
       `INSERT INTO payments (id, check_id, tender_id, tender_type, amount, tip, reference, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'authorized')`,
@@ -296,6 +298,9 @@ export class CapsService {
       checkId,
       tenderId: params.tenderId,
       tenderType: params.tenderType,
+      isCashMedia: tender?.is_cash_media === 1,
+      isCardMedia: tender?.is_card_media === 1,
+      isGiftMedia: tender?.is_gift_media === 1,
       amount: params.amount,
       tip: params.tip || 0,
       reference: params.reference,
@@ -376,16 +381,22 @@ export class CapsService {
       [checkId]
     );
     
-    return rows.map(row => ({
-      id: row.id,
-      checkId: row.check_id,
-      tenderId: row.tender_id,
-      tenderType: row.tender_type,
-      amount: row.amount,
-      tip: row.tip,
-      reference: row.reference || undefined,
-      status: row.status as 'authorized' | 'captured' | 'voided',
-    }));
+    return rows.map(row => {
+      const tender = this.db.getTender(row.tender_id);
+      return {
+        id: row.id,
+        checkId: row.check_id,
+        tenderId: row.tender_id,
+        tenderType: row.tender_type,
+        isCashMedia: tender?.is_cash_media === 1,
+        isCardMedia: tender?.is_card_media === 1,
+        isGiftMedia: tender?.is_gift_media === 1,
+        amount: row.amount,
+        tip: row.tip,
+        reference: row.reference || undefined,
+        status: row.status as 'authorized' | 'captured' | 'voided',
+      };
+    });
   }
   
   private getTotalPayments(checkId: string): number {
@@ -438,7 +449,7 @@ interface AddItemParams {
 
 interface AddPaymentParams {
   tenderId: string;
-  tenderType: 'cash' | 'credit' | 'debit' | 'gift';
+  tenderType: 'cash' | 'credit' | 'debit' | 'gift'; // display/label only, not used for behavioral logic
   amount: number;
   tip?: number;
   reference?: string;
@@ -482,7 +493,10 @@ interface Payment {
   id: string;
   checkId: string;
   tenderId: string;
-  tenderType: string;
+  tenderType: string; // display/label only, not used for behavioral logic
+  isCashMedia?: boolean;
+  isCardMedia?: boolean;
+  isGiftMedia?: boolean;
   amount: number;
   tip: number;
   reference?: string;

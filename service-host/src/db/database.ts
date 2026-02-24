@@ -85,7 +85,80 @@ export class Database {
   
   private migrateSchema(fromVersion: number, toVersion: number): void {
     console.log(`[DB] Migrating schema from v${fromVersion} to v${toVersion}`);
+    
+    if (fromVersion < 4) {
+      this.migrateToV4();
+    }
+    
     this.run('INSERT INTO schema_version (version) VALUES (?)', [toVersion]);
+  }
+  
+  private migrateToV4(): void {
+    console.log('[DB] Running v4 migration: tender flags, RVC print flags, emc_option_flags');
+    
+    const tenderColumns = [
+      { name: 'is_system', def: 'INTEGER DEFAULT 0' },
+      { name: 'pop_drawer', def: 'INTEGER DEFAULT 0' },
+      { name: 'allow_tips', def: 'INTEGER DEFAULT 0' },
+      { name: 'allow_over_tender', def: 'INTEGER DEFAULT 0' },
+      { name: 'print_check_on_payment', def: 'INTEGER DEFAULT 1' },
+      { name: 'require_manager_approval', def: 'INTEGER DEFAULT 0' },
+      { name: 'requires_payment_processor', def: 'INTEGER DEFAULT 0' },
+      { name: 'display_order', def: 'INTEGER DEFAULT 0' },
+      { name: 'is_cash_media', def: 'INTEGER DEFAULT 0' },
+      { name: 'is_card_media', def: 'INTEGER DEFAULT 0' },
+      { name: 'is_gift_media', def: 'INTEGER DEFAULT 0' },
+    ];
+    
+    for (const col of tenderColumns) {
+      try {
+        this.run(`ALTER TABLE tenders ADD COLUMN ${col.name} ${col.def}`);
+      } catch (e: any) {
+        if (!e.message?.includes('duplicate column')) throw e;
+      }
+    }
+    
+    const rvcColumns = [
+      { name: 'receipt_print_mode', def: "TEXT DEFAULT 'auto_on_close'" },
+      { name: 'receipt_copies', def: 'INTEGER DEFAULT 1' },
+      { name: 'kitchen_print_mode', def: "TEXT DEFAULT 'auto_on_send'" },
+      { name: 'void_receipt_print', def: 'INTEGER DEFAULT 1' },
+      { name: 'require_guest_count', def: 'INTEGER DEFAULT 0' },
+    ];
+    
+    for (const col of rvcColumns) {
+      try {
+        this.run(`ALTER TABLE rvcs ADD COLUMN ${col.name} ${col.def}`);
+      } catch (e: any) {
+        if (!e.message?.includes('duplicate column')) throw e;
+      }
+    }
+    
+    this.run(`
+      CREATE TABLE IF NOT EXISTS emc_option_flags (
+        id TEXT PRIMARY KEY,
+        enterprise_id TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        option_key TEXT NOT NULL,
+        value_text TEXT,
+        scope_level TEXT NOT NULL,
+        scope_id TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      )
+    `);
+    this.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emc_option_flags_unique ON emc_option_flags (enterprise_id, entity_type, entity_id, option_key, scope_level, scope_id)`);
+    this.run(`CREATE INDEX IF NOT EXISTS idx_emc_option_flags_entity ON emc_option_flags (enterprise_id, entity_type, entity_id)`);
+    this.run(`CREATE INDEX IF NOT EXISTS idx_emc_option_flags_key ON emc_option_flags (enterprise_id, option_key)`);
+    
+    this.run(`UPDATE tenders SET is_cash_media = 1 WHERE type = 'cash' AND is_cash_media = 0`);
+    this.run(`UPDATE tenders SET is_card_media = 1 WHERE type IN ('credit', 'debit') AND is_card_media = 0`);
+    this.run(`UPDATE tenders SET is_gift_media = 1 WHERE type = 'gift' AND is_gift_media = 0`);
+    this.run(`UPDATE tenders SET pop_drawer = 1, allow_over_tender = 1 WHERE type = 'cash' AND pop_drawer = 0`);
+    this.run(`UPDATE tenders SET allow_tips = 1 WHERE type IN ('credit', 'debit') AND allow_tips = 0`);
+    
+    console.log('[DB] v4 migration complete');
   }
   
   // ==========================================================================
@@ -228,8 +301,9 @@ export class Database {
       `INSERT OR REPLACE INTO rvcs (
         id, property_id, name, code, fast_transaction_default,
         default_order_type, order_type_default, dynamic_order_mode, dom_send_mode,
-        active, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+        active, receipt_print_mode, receipt_copies, kitchen_print_mode,
+        void_receipt_print, require_guest_count, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
       [
         rvc.id, rvc.propertyId, rvc.name, rvc.code,
         rvc.fastTransactionDefault ? 1 : 0,
@@ -238,6 +312,11 @@ export class Database {
         rvc.dynamicOrderMode ? 1 : 0,
         rvc.domSendMode || 'fire_on_fly',
         rvc.active !== false ? 1 : 0,
+        rvc.receiptPrintMode || 'auto_on_close',
+        rvc.receiptCopies ?? 1,
+        rvc.kitchenPrintMode || 'auto_on_send',
+        rvc.voidReceiptPrint !== false ? 1 : 0,
+        rvc.requireGuestCount ? 1 : 0,
       ]
     );
   }
@@ -638,11 +717,26 @@ export class Database {
     this.run(
       `INSERT OR REPLACE INTO tenders (
         id, enterprise_id, property_id, rvc_id, name, code, type,
-        payment_processor_id, active, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+        payment_processor_id, is_system, pop_drawer, allow_tips,
+        allow_over_tender, print_check_on_payment, require_manager_approval,
+        requires_payment_processor, display_order,
+        is_cash_media, is_card_media, is_gift_media,
+        active, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
       [
         tender.id, tender.enterpriseId, tender.propertyId, tender.rvcId,
         tender.name, tender.code, tender.type, tender.paymentProcessorId,
+        tender.isSystem ? 1 : 0,
+        tender.popDrawer ? 1 : 0,
+        tender.allowTips ? 1 : 0,
+        tender.allowOverTender ? 1 : 0,
+        tender.printCheckOnPayment !== false ? 1 : 0,
+        tender.requireManagerApproval ? 1 : 0,
+        tender.requiresPaymentProcessor ? 1 : 0,
+        tender.displayOrder || 0,
+        tender.isCashMedia ? 1 : 0,
+        tender.isCardMedia ? 1 : 0,
+        tender.isGiftMedia ? 1 : 0,
         tender.active !== false ? 1 : 0,
       ]
     );
@@ -662,6 +756,61 @@ export class Database {
   
   getTendersByType(propertyId: string, type: string): any[] {
     return this.all('SELECT * FROM tenders WHERE property_id = ? AND type = ? AND active = 1', [propertyId, type]);
+  }
+  
+  getTendersByCashMedia(propertyId: string): any[] {
+    return this.all('SELECT * FROM tenders WHERE property_id = ? AND is_cash_media = 1 AND active = 1', [propertyId]);
+  }
+  
+  getTendersByCardMedia(propertyId: string): any[] {
+    return this.all('SELECT * FROM tenders WHERE property_id = ? AND is_card_media = 1 AND active = 1', [propertyId]);
+  }
+  
+  // ==========================================================================
+  // EMC Option Flags
+  // ==========================================================================
+  
+  upsertOptionFlag(flag: any): void {
+    this.run(
+      `INSERT OR REPLACE INTO emc_option_flags (
+        id, enterprise_id, entity_type, entity_id, option_key, value_text,
+        scope_level, scope_id, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      [
+        flag.id, flag.enterpriseId, flag.entityType, flag.entityId,
+        flag.optionKey, flag.valueText,
+        flag.scopeLevel, flag.scopeId,
+        flag.createdAt || new Date().toISOString(),
+      ]
+    );
+  }
+  
+  getOptionFlags(enterpriseId?: string): any[] {
+    if (enterpriseId) {
+      return this.all('SELECT * FROM emc_option_flags WHERE enterprise_id = ?', [enterpriseId]);
+    }
+    return this.all('SELECT * FROM emc_option_flags');
+  }
+  
+  resolveOptionFlag(
+    entityType: string,
+    entityId: string,
+    optionKey: string,
+    scopeChain: { level: string; id: string }[]
+  ): string | null {
+    for (const scope of scopeChain) {
+      const row = this.get<{ value_text: string }>(
+        `SELECT value_text FROM emc_option_flags
+         WHERE entity_type = ? AND entity_id = ? AND option_key = ? AND scope_level = ? AND scope_id = ?`,
+        [entityType, entityId, optionKey, scope.level, scope.id]
+      );
+      if (row) return row.value_text;
+    }
+    return null;
+  }
+  
+  deleteOptionFlag(id: string): void {
+    this.run('DELETE FROM emc_option_flags WHERE id = ?', [id]);
   }
   
   // ==========================================================================

@@ -15,7 +15,7 @@ Preferred communication style: Simple, everyday language.
 - **Simphony-Class Configuration**: Configuration inheritance with override capabilities.
 - **Touch-First UI**: High-contrast theming optimized for POS terminals.
 - **Real-time Operations**: WebSocket communication for KDS updates and CAPS synchronization.
-- **Offline Resilience**: Optional on-premise CAPS with local SQLite for offline operations and cloud synchronization.
+- **Offline Resilience**: Optional on-premise CAPS with local SQLite for offline operations and cloud synchronization. Service-host SQLite schema (v4) mirrors cloud schema for tenders (behavior + media flags), RVCs (print flags), and `emc_option_flags` (OptionBits with scope resolution).
 - **Non-Destructive Changes**: All system modifications must be additive and not alter existing enterprise configurations. New features must be optional and default to OFF/NULL/false for existing enterprises. Specifically:
   - All new boolean option bits / feature flags in any schema table MUST default to `false` (never `true`).
   - New text/integer config fields MUST default to `null` (no value) unless there is an explicit reason.

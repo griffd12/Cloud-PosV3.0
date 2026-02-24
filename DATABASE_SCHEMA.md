@@ -4155,3 +4155,13 @@ Dedicated boolean columns on the `tenders` table that drive all reporting and ca
 **Backfill Logic** (migration 004): `type='cash' → is_cash_media=true`, `type='credit'/'debit' → is_card_media=true`, `type='gift' → is_gift_media=true`.
 
 **Usage**: All reporting SQL and JS logic uses these flags instead of `tender.type` string comparisons. The `type` column is retained for classification labels only.
+
+## Service Host (CAPS) SQLite Parity
+
+The service-host SQLite schema (`service-host/src/db/schema.ts`, SCHEMA_VERSION=4) mirrors the cloud Postgres schema for offline operations:
+
+**Tenders**: Includes all behavior flags (`is_system`, `pop_drawer`, `allow_tips`, `allow_over_tender`, `print_check_on_payment`, `require_manager_approval`, `requires_payment_processor`, `display_order`) and media classification flags (`is_cash_media`, `is_card_media`, `is_gift_media`). Migration v3→v4 uses ALTER TABLE ADD COLUMN with try/catch for idempotency and backfills from `type` column.
+
+**RVCs**: Includes printing flags (`receipt_print_mode`, `receipt_copies`, `kitchen_print_mode`, `void_receipt_print`, `require_guest_count`).
+
+**EMC Option Flags**: `emc_option_flags` table with unique index on `(enterprise_id, entity_type, entity_id, option_key, scope_level, scope_id)`. Synced from cloud during config sync. Scope resolution follows workstation → RVC → property → enterprise precedence.

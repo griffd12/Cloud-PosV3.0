@@ -78,6 +78,8 @@ interface FullConfigResponse {
   fiscalPeriods?: any[];
   
   itemAvailability?: any[];
+  
+  emcOptionFlags?: any[];
 }
 
 interface DeltaConfigResponse {
@@ -572,6 +574,14 @@ export class ConfigSync {
       console.log(`  Synced ${config.itemAvailability.length} item availability records`);
     }
     
+    if (config.emcOptionFlags) {
+      for (const flag of config.emcOptionFlags) {
+        this.db.upsertOptionFlag(flag);
+        count++;
+      }
+      console.log(`  Synced ${config.emcOptionFlags.length} EMC option flags`);
+    }
+    
     return count;
   }
   
@@ -778,6 +788,9 @@ export class ConfigSync {
       case 'itemAvailability':
         this.db.upsertItemAvailability(data);
         break;
+      case 'emcOptionFlag':
+        this.db.upsertOptionFlag(data);
+        break;
         
       default:
         console.warn(`Unknown config entity type: ${entityType}`);
@@ -835,6 +848,7 @@ export class ConfigSync {
       loyaltyRedemption: 'loyalty_redemptions',
       giftCardTransaction: 'gift_card_transactions',
       itemAvailability: 'item_availability',
+      emcOptionFlag: 'emc_option_flags',
       fiscalPeriod: 'fiscal_periods',
       drawerAssignment: 'drawer_assignments',
       cashDrawer: 'cash_drawers',
@@ -1048,5 +1062,18 @@ export class ConfigSync {
   
   getLoyaltyMember(id: string): any | null {
     return this.db.getLoyaltyMember(id);
+  }
+  
+  getOptionFlags(enterpriseId?: string): any[] {
+    return this.db.getOptionFlags(enterpriseId);
+  }
+  
+  resolveOptionFlag(
+    entityType: string,
+    entityId: string,
+    optionKey: string,
+    scopeChain: { level: string; id: string }[]
+  ): string | null {
+    return this.db.resolveOptionFlag(entityType, entityId, optionKey, scopeChain);
   }
 }
