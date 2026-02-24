@@ -1,0 +1,57 @@
+TASK: Complete OptionBits conversion by eliminating ALL remaining tender.type === ... comparisons and replacing them with OptionBits flags.
+You reported 11 remaining checks (9 in reporting-routes.ts, 2 in storage.ts). Convert them all now.
+
+Rules:
+
+tender.type may remain ONLY for classification labels (grouping headings like “Cash/Credit/Gift”), but MUST NOT drive behavior or calculations.
+
+All behavioral/reporting decisions must use resolved option flags from resolveEffectiveConfig() / getOptionBool() (whatever your runtime accessor is).
+
+Define the tender option keys (must be in registry / docs):
+
+tender.pop_drawer (bool)
+
+tender.allow_tips (bool)
+
+tender.allow_over_tender (bool)
+
+tender.is_cash_media (bool) ← IMPORTANT for reporting/cash drawer reconciliation
+
+tender.is_card_media (bool) ← IMPORTANT for separating card settlements
+
+tender.is_gift_media (bool) ← IMPORTANT for gift liability reporting
+
+tender.counts_as_revenue (bool, default true) ← for house accounts/AR scenarios later
+
+Reporting conversion requirements:
+Replace logic like:
+
+“if tender.type === cash then include in cash drawer totals”
+
+“if tender.type === credit then treat as card”
+With:
+
+cash drawer totals use is_cash_media
+
+card settlement totals use is_card_media
+
+gift totals use is_gift_media
+
+tips shown only if allow_tips (or based on check_payment.tip_amount if you store it)
+
+Storage conversion requirements:
+Any tender validation that depends on type must become option driven, e.g.:
+
+“requires payment processor” must use tender.requires_processor option (bool)
+
+“allow over tender” uses allow_over_tender
+
+Deliverables (must provide proof):
+
+A grep output showing 0 remaining occurrences of tender.type === (except in display-only mapping code clearly marked // classification only).
+
+A short mapping table in DATABASE_SCHEMA.md documenting each option key, type, default, and purpose.
+
+Update replit.md architecture section to state: “Reporting logic uses option flags, not tender type strings.”
+
+Run a report validation on one business day and show that cash/card/gift totals match payment breakdown using option flags.
