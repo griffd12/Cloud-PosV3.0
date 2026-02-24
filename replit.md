@@ -9,7 +9,7 @@ This project is an enterprise cloud-based Point of Sale (POS) system specificall
 - **Service-Host Schema**: V4 (tenders behavior/media, RVC print, emc_option_flags)
 
 ## GitHub Repository
-- **URL**: https://github.com/griffd12/Cloud-pos-V3.0
+- **URL**: https://github.com/griffd12/Cloud-PosV3.0
 - All Cloud POS V3.0 files are uploaded and stored in this repository.
 
 ## User Preferences
