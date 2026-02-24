@@ -1,0 +1,576 @@
+import type { IStorage } from "./storage";
+import { db } from "./db";
+import { checks, checkItems, checkPayments, kdsTickets, kdsTicketItems, rounds, stressTestResults } from "@shared/schema";
+import { eq, inArray, sql, desc } from "drizzle-orm";
+
+export async function ensureStressTestTender(storage: IStorage): Promise<string> {
+  const allTenders = await storage.getAllTendersIncludingSystem();
+  const existing = allTenders.find(t => t.code === "STRESS" && t.isSystem);
+  if (existing) return existing.id;
+
+  const created = await storage.createTender({
+    name: "Stress Test",
+    code: "STRESS",
+    type: "other",
+    active: true,
+    isSystem: true,
+  });
+  console.log("Auto-provisioned system tender: Stress Test");
+  return created.id;
+}
+
+interface StressTestConfig {
+  rvcId: string;
+  employeeId: string;
+  tenderId: string;
+  durationMinutes: number;
+  targetTxPerMinute: number;
+  patterns: ("single" | "double" | "triple")[];
+}
+
+interface TransactionResult {
+  checkId: string;
+  startTime: number;
+  endTime: number;
+  durationMs: number;
+  itemCount: number;
+  total: number;
+  success: boolean;
+  error?: string;
+}
+
+interface StressTestMetrics {
+  status: "running" | "completed" | "stopped" | "error";
+  startedAt: string;
+  elapsedSeconds: number;
+  totalTransactions: number;
+  successfulTransactions: number;
+  failedTransactions: number;
+  avgTransactionMs: number;
+  minTransactionMs: number;
+  maxTransactionMs: number;
+  transactionsPerMinute: number;
+  intervals: IntervalMetrics[];
+  errors: string[];
+}
+
+interface IntervalMetrics {
+  minuteMark: number;
+  txCount: number;
+  txPerMinute: number;
+  avgMs: number;
+}
+
+let activeTest: {
+  config: StressTestConfig;
+  running: boolean;
+  startTime: number;
+  results: TransactionResult[];
+  testCheckIds: string[];
+  menuItems: { id: string; name: string; price: string }[];
+  intervalTimer?: ReturnType<typeof setInterval>;
+} | null = null;
+
+async function runTransaction(
+  baseUrl: string,
+  config: StressTestConfig,
+  menuItems: { id: string; name: string; price: string }[],
+): Promise<TransactionResult> {
+  const startTime = Date.now();
+  let checkId = "";
+  let itemCount = 0;
+  let total = 0;
+
+  try {
+    const pattern = config.patterns[Math.floor(Math.random() * config.patterns.length)];
+    itemCount = pattern === "single" ? 1 : pattern === "double" ? 2 : 3;
+
+    const createRes = await fetch(`${baseUrl}/api/checks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        rvcId: config.rvcId,
+        employeeId: config.employeeId,
+        orderType: "dine_in",
+        testMode: true,
+      }),
+    });
+    if (!createRes.ok) throw new Error(`Create check failed: ${createRes.status}`);
+    const check = await createRes.json();
+    checkId = check.id;
+
+    for (let i = 0; i < itemCount; i++) {
+      const item = menuItems[Math.floor(Math.random() * menuItems.length)];
+      const addRes = await fetch(`${baseUrl}/api/checks/${checkId}/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          menuItemId: item.id,
+          menuItemName: item.name,
+          unitPrice: item.price,
+          quantity: 1,
+          modifiers: [],
+        }),
+      });
+      if (!addRes.ok) throw new Error(`Add item failed: ${addRes.status}`);
+    }
+
+    const sendRes = await fetch(`${baseUrl}/api/checks/${checkId}/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employeeId: config.employeeId }),
+    });
+    if (!sendRes.ok) throw new Error(`Send failed: ${sendRes.status}`);
+
+    const checkRes = await fetch(`${baseUrl}/api/checks/${checkId}`);
+    if (!checkRes.ok) throw new Error(`Get check failed: ${checkRes.status}`);
+    const updatedCheck = await checkRes.json();
+    total = parseFloat(updatedCheck.total || "0");
+
+    const payRes = await fetch(`${baseUrl}/api/checks/${checkId}/payments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tenderId: config.tenderId,
+        amount: total.toFixed(2),
+        employeeId: config.employeeId,
+      }),
+    });
+    if (!payRes.ok) throw new Error(`Payment failed: ${payRes.status}`);
+
+    const endTime = Date.now();
+    return {
+      checkId,
+      startTime,
+      endTime,
+      durationMs: endTime - startTime,
+      itemCount,
+      total,
+      success: true,
+    };
+  } catch (error: any) {
+    const endTime = Date.now();
+    return {
+      checkId,
+      startTime,
+      endTime,
+      durationMs: endTime - startTime,
+      itemCount,
+      total,
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+function computeMetrics(): StressTestMetrics {
+  if (!activeTest) {
+    return {
+      status: "stopped",
+      startedAt: "",
+      elapsedSeconds: 0,
+      totalTransactions: 0,
+      successfulTransactions: 0,
+      failedTransactions: 0,
+      avgTransactionMs: 0,
+      minTransactionMs: 0,
+      maxTransactionMs: 0,
+      transactionsPerMinute: 0,
+      intervals: [],
+      errors: [],
+    };
+  }
+
+  const { results, startTime, running } = activeTest;
+  const elapsed = (Date.now() - startTime) / 1000;
+  const successful = results.filter((r) => r.success);
+  const failed = results.filter((r) => !r.success);
+  const durations = successful.map((r) => r.durationMs);
+
+  const intervalMinutes = [1, 5, 10, 15];
+  const intervals: IntervalMetrics[] = [];
+  for (const mins of intervalMinutes) {
+    const cutoff = startTime + mins * 60 * 1000;
+    if (cutoff > Date.now()) break;
+    const inInterval = successful.filter((r) => r.endTime <= cutoff);
+    const actualElapsed = Math.min(mins, elapsed / 60);
+    intervals.push({
+      minuteMark: mins,
+      txCount: inInterval.length,
+      txPerMinute: actualElapsed > 0 ? inInterval.length / actualElapsed : 0,
+      avgMs:
+        inInterval.length > 0
+          ? inInterval.reduce((s, r) => s + r.durationMs, 0) / inInterval.length
+          : 0,
+    });
+  }
+
+  return {
+    status: running ? "running" : results.length > 0 ? "completed" : "stopped",
+    startedAt: new Date(startTime).toISOString(),
+    elapsedSeconds: Math.round(elapsed),
+    totalTransactions: results.length,
+    successfulTransactions: successful.length,
+    failedTransactions: failed.length,
+    avgTransactionMs:
+      durations.length > 0
+        ? Math.round(durations.reduce((s, d) => s + d, 0) / durations.length)
+        : 0,
+    minTransactionMs: durations.length > 0 ? Math.min(...durations) : 0,
+    maxTransactionMs: durations.length > 0 ? Math.max(...durations) : 0,
+    transactionsPerMinute:
+      elapsed > 0 ? Math.round((successful.length / elapsed) * 60 * 10) / 10 : 0,
+    intervals,
+    errors: failed.slice(-10).map((r) => r.error || "Unknown error"),
+  };
+}
+
+async function startTest(baseUrl: string, config: StressTestConfig, storage: IStorage) {
+  if (activeTest?.running) {
+    throw new Error("A stress test is already running");
+  }
+
+  const allMenuItems = await storage.getMenuItems();
+  const availableItems = allMenuItems
+    .filter((mi: any) => mi.active && parseFloat(mi.price || "0") > 0)
+    .slice(0, 20)
+    .map((mi: any) => ({ id: mi.id, name: mi.name, price: mi.price }));
+
+  if (availableItems.length === 0) {
+    throw new Error("No active menu items with prices found");
+  }
+
+  activeTest = {
+    config,
+    running: true,
+    startTime: Date.now(),
+    results: [],
+    testCheckIds: [],
+    menuItems: availableItems,
+  };
+
+  const delayBetweenTx = (60 * 1000) / config.targetTxPerMinute;
+  const endTime = activeTest.startTime + config.durationMinutes * 60 * 1000;
+
+  (async () => {
+    while (activeTest?.running && Date.now() < endTime) {
+      const result = await runTransaction(baseUrl, config, activeTest.menuItems);
+      if (!activeTest?.running) break;
+      activeTest.results.push(result);
+      if (result.checkId) {
+        activeTest.testCheckIds.push(result.checkId);
+      }
+
+      const timeTaken = result.durationMs;
+      const waitTime = Math.max(0, delayBetweenTx - timeTaken);
+      if (waitTime > 0 && activeTest?.running) {
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+      }
+    }
+
+    if (activeTest) {
+      activeTest.running = false;
+      const metrics = computeMetrics();
+      await saveTestResults(config, metrics);
+    }
+  })();
+}
+
+function stopTest() {
+  if (activeTest) {
+    activeTest.running = false;
+  }
+}
+
+async function cleanupTestData(): Promise<{ deletedChecks: number; deletedItems: number; deletedPayments: number; deletedKdsTickets: number }> {
+  const testChecks = await db.select({ id: checks.id }).from(checks).where(eq(checks.testMode, true));
+  const checkIds = testChecks.map(c => c.id);
+
+  if (checkIds.length === 0) {
+    activeTest = null;
+    return { deletedChecks: 0, deletedItems: 0, deletedPayments: 0, deletedKdsTickets: 0 };
+  }
+
+  const batchSize = 100;
+  let deletedItems = 0, deletedPayments = 0, deletedKdsTickets = 0;
+
+  for (let i = 0; i < checkIds.length; i += batchSize) {
+    const batch = checkIds.slice(i, i + batchSize);
+
+    const kdsTicketRows = await db.select({ id: kdsTickets.id }).from(kdsTickets).where(inArray(kdsTickets.checkId, batch));
+    const ticketIds = kdsTicketRows.map(t => t.id);
+    if (ticketIds.length > 0) {
+      await db.delete(kdsTicketItems).where(inArray(kdsTicketItems.kdsTicketId, ticketIds));
+      await db.delete(kdsTickets).where(inArray(kdsTickets.id, ticketIds));
+      deletedKdsTickets += ticketIds.length;
+    }
+
+    const itemResult = await db.delete(checkItems).where(inArray(checkItems.checkId, batch));
+    deletedItems += (itemResult as any).rowCount || 0;
+
+    await db.delete(rounds).where(inArray(rounds.checkId, batch));
+
+    const payResult = await db.delete(checkPayments).where(inArray(checkPayments.checkId, batch));
+    deletedPayments += (payResult as any).rowCount || 0;
+
+    await db.delete(checks).where(inArray(checks.id, batch));
+  }
+
+  const result = { deletedChecks: checkIds.length, deletedItems, deletedPayments, deletedKdsTickets };
+  activeTest = null;
+  return result;
+}
+
+async function saveTestResults(config: StressTestConfig, metrics: StressTestMetrics) {
+  try {
+    await db.insert(stressTestResults).values({
+      rvcId: config.rvcId,
+      employeeId: config.employeeId,
+      status: metrics.status,
+      durationMinutes: config.durationMinutes,
+      targetTxPerMinute: config.targetTxPerMinute,
+      patterns: config.patterns,
+      totalTransactions: metrics.totalTransactions,
+      successfulTransactions: metrics.successfulTransactions,
+      failedTransactions: metrics.failedTransactions,
+      avgTransactionMs: metrics.avgTransactionMs,
+      minTransactionMs: metrics.minTransactionMs,
+      maxTransactionMs: metrics.maxTransactionMs,
+      actualTxPerMinute: String(metrics.transactionsPerMinute),
+      elapsedSeconds: metrics.elapsedSeconds,
+      errors: metrics.errors.length > 0 ? metrics.errors : null,
+      startedAt: new Date(metrics.startedAt),
+      completedAt: new Date(),
+    });
+  } catch (e) {
+    console.error("Failed to save stress test results:", e);
+  }
+}
+
+export function registerStressTestRoutes(app: any, storage: IStorage) {
+  app.get("/api/stress-test/tender", async (_req: any, res: any) => {
+    try {
+      const tenderId = await ensureStressTestTender(storage);
+      res.json({ tenderId });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to get stress test tender: " + error.message });
+    }
+  });
+
+  app.get("/api/stress-test/results", async (req: any, res: any) => {
+    try {
+      const { rvcId, propertyId, limit: limitParam } = req.query;
+      const resultLimit = parseInt(limitParam as string) || 50;
+      let results;
+      if (rvcId) {
+        results = await db.select().from(stressTestResults)
+          .where(eq(stressTestResults.rvcId, rvcId as string))
+          .orderBy(desc(stressTestResults.startedAt))
+          .limit(resultLimit);
+      } else {
+        results = await db.select().from(stressTestResults)
+          .orderBy(desc(stressTestResults.startedAt))
+          .limit(resultLimit);
+      }
+      res.json(results);
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to get stress test results: " + error.message });
+    }
+  });
+
+  app.post("/api/stress-test/results", async (req: any, res: any) => {
+    try {
+      const data = req.body;
+      await db.insert(stressTestResults).values({
+        rvcId: data.rvcId,
+        employeeId: data.employeeId,
+        status: data.status,
+        durationMinutes: data.durationMinutes,
+        targetTxPerMinute: data.targetTxPerMinute,
+        patterns: data.patterns,
+        totalTransactions: data.totalTransactions,
+        successfulTransactions: data.successfulTransactions,
+        failedTransactions: data.failedTransactions,
+        avgTransactionMs: data.avgTransactionMs,
+        minTransactionMs: data.minTransactionMs,
+        maxTransactionMs: data.maxTransactionMs,
+        actualTxPerMinute: data.actualTxPerMinute ? String(data.actualTxPerMinute) : null,
+        elapsedSeconds: data.elapsedSeconds,
+        errors: data.errors?.length > 0 ? data.errors : null,
+        startedAt: data.startedAt ? new Date(data.startedAt) : new Date(),
+        completedAt: new Date(),
+      });
+      res.json({ message: "Results saved" });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to save results: " + error.message });
+    }
+  });
+
+  app.post("/api/stress-test/start", async (req: any, res: any) => {
+    try {
+      const {
+        rvcId,
+        employeeId,
+        tenderId,
+        durationMinutes = 5,
+        targetTxPerMinute = 10,
+        patterns = ["single", "double", "triple"],
+      } = req.body;
+
+      if (!rvcId || !employeeId || !tenderId) {
+        return res.status(400).json({ message: "rvcId, employeeId, and tenderId are required" });
+      }
+      if (targetTxPerMinute <= 0 || durationMinutes <= 0) {
+        return res.status(400).json({ message: "targetTxPerMinute and durationMinutes must be greater than 0" });
+      }
+
+      const protocol = req.headers["x-forwarded-proto"] || "http";
+      const host = req.headers["host"] || "localhost:5000";
+      const baseUrl = `${protocol}://${host}`;
+
+      await startTest(baseUrl, {
+        rvcId,
+        employeeId,
+        tenderId,
+        durationMinutes,
+        targetTxPerMinute,
+        patterns,
+      }, storage);
+
+      res.json({ message: "Stress test started", config: { rvcId, durationMinutes, targetTxPerMinute, patterns } });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/stress-test/stop", async (_req: any, res: any) => {
+    stopTest();
+    res.json({ message: "Stress test stopped", metrics: computeMetrics() });
+  });
+
+  app.get("/api/stress-test/status", async (_req: any, res: any) => {
+    res.json(computeMetrics());
+  });
+
+  app.post("/api/stress-test/cleanup", async (_req: any, res: any) => {
+    try {
+      const result = await cleanupTestData();
+      res.json({ message: "Test data cleaned up", ...result });
+    } catch (error: any) {
+      res.status(500).json({ message: "Cleanup failed: " + error.message });
+    }
+  });
+
+  app.post("/api/stress-test/collision-test", async (req: any, res: any) => {
+    try {
+      const { rvcId, employeeId, concurrentRequests = 20 } = req.body;
+      if (!rvcId || !employeeId) {
+        return res.status(400).json({ message: "rvcId and employeeId are required" });
+      }
+      if (concurrentRequests < 2 || concurrentRequests > 100) {
+        return res.status(400).json({ message: "concurrentRequests must be between 2 and 100" });
+      }
+
+      const promises = Array.from({ length: concurrentRequests }, () =>
+        storage.createCheckAtomic(rvcId, {
+          rvcId,
+          employeeId,
+          orderType: 'dine_in',
+          status: 'open',
+          testMode: true,
+        })
+      );
+      const results = await Promise.all(promises);
+
+      const checkNumbers = results.map(c => c.checkNumber);
+      const seen = new Set<number>();
+      const duplicates: number[] = [];
+      for (const num of checkNumbers) {
+        if (seen.has(num)) {
+          duplicates.push(num);
+        } else {
+          seen.add(num);
+        }
+      }
+
+      const testCheckIds = results.map(c => c.id);
+      const batchSize = 100;
+      for (let i = 0; i < testCheckIds.length; i += batchSize) {
+        const batch = testCheckIds.slice(i, i + batchSize);
+        await db.delete(checks).where(inArray(checks.id, batch));
+      }
+
+      res.json({
+        success: duplicates.length === 0,
+        checkNumbers,
+        duplicates,
+        totalRequests: concurrentRequests,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: "Collision test failed: " + error.message });
+    }
+  });
+
+  app.get("/api/stress-test/validate", async (_req: any, res: any) => {
+    try {
+      const [
+        duplicateCheckNumbers,
+        duplicatePayments,
+        duplicateKdsTickets,
+        duplicatePrintJobs,
+        duplicateIdempotencyKeys,
+      ] = await Promise.all([
+        db.execute(sql`
+          SELECT rvc_id, check_number, COUNT(*) as cnt
+          FROM checks
+          GROUP BY rvc_id, check_number
+          HAVING COUNT(*) > 1
+        `),
+        db.execute(sql`
+          SELECT check_id, tender_id, amount, COUNT(*) as cnt
+          FROM check_payments
+          GROUP BY check_id, tender_id, amount
+          HAVING COUNT(*) > 1
+        `),
+        db.execute(sql`
+          SELECT check_id, round_id, kds_device_id, COUNT(*) as cnt
+          FROM kds_tickets
+          GROUP BY check_id, round_id, kds_device_id
+          HAVING COUNT(*) > 1
+        `),
+        db.execute(sql`
+          SELECT dedupe_key, COUNT(*) as cnt
+          FROM print_jobs
+          WHERE dedupe_key IS NOT NULL
+          GROUP BY dedupe_key
+          HAVING COUNT(*) > 1
+        `),
+        db.execute(sql`
+          SELECT enterprise_id, workstation_id, operation, idempotency_key, COUNT(*) as cnt
+          FROM idempotency_keys
+          GROUP BY enterprise_id, workstation_id, operation, idempotency_key
+          HAVING COUNT(*) > 1
+        `),
+      ]);
+
+      const results = {
+        duplicateCheckNumbers: duplicateCheckNumbers.rows,
+        duplicatePayments: duplicatePayments.rows,
+        duplicateKdsTickets: duplicateKdsTickets.rows,
+        duplicatePrintJobs: duplicatePrintJobs.rows,
+        duplicateIdempotencyKeys: duplicateIdempotencyKeys.rows,
+      };
+
+      const valid =
+        results.duplicateCheckNumbers.length === 0 &&
+        results.duplicatePayments.length === 0 &&
+        results.duplicateKdsTickets.length === 0 &&
+        results.duplicatePrintJobs.length === 0 &&
+        results.duplicateIdempotencyKeys.length === 0;
+
+      res.json({ valid, results });
+    } catch (error: any) {
+      res.status(500).json({ message: "Validation failed: " + error.message });
+    }
+  });
+}
