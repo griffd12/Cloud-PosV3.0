@@ -1,0 +1,90 @@
+TASK: Bring SQLite offline schema into parity with current Postgres/Drizzle schema and DATABASE_SCHEMA (1).md, focusing on OptionBits + Tender behavior + Tender media classification + RVC printing behavior.
+
+FILES IN SCOPE:
+- /mnt/data/schema.ts  (SQLite schema for service host)  <-- this is behind
+- /mnt/data/schema (1).ts (older SQLite schema file with duplicates) <-- treat as obsolete OR fix/retire
+- /mnt/data/schema (2).ts (current drizzle schema reference)
+- /mnt/data/DATABASE_SCHEMA (1).md (source of truth doc)
+- server-side already updated: storage.ts, reporting-routes.ts (do NOT regress)
+
+GOAL:
+1) Offline SQLite must support the same config-driven behavior as cloud:
+   - tender behavior flags
+   - tender media classification flags used by reporting
+   - emc_option_flags table for option bits
+   - RVC printing flags (if cloud expects them)
+2) Offline schema changes must be additive and backward safe:
+   - If table exists: use ALTER TABLE ADD COLUMN with defaults
+   - If column exists: skip
+   - Must not destroy data
+
+STEP A — Fix/Retire the duplicate rvcs definition
+- schema (1).ts contains two CREATE TABLE rvcs blocks. That file is not safe as a migration source.
+- Either:
+  (Preferred) mark schema (1).ts obsolete and stop using it
+  OR
+  remove the duplicate definition and keep only the newer/superset version.
+
+STEP B — Update /mnt/data/schema.ts (SQLite service-host schema)
+1) Bump SCHEMA_VERSION from 3 to the next integer (ex: 4).
+2) Add/extend SQLite tables:
+
+TENDERS:
+- If tenders table exists, add these columns (SQLite integer 0/1 for booleans):
+  pop_drawer INTEGER DEFAULT 0
+  allow_tips INTEGER DEFAULT 0
+  allow_over_tender INTEGER DEFAULT 0
+  print_check_on_payment INTEGER DEFAULT 1
+  require_manager_approval INTEGER DEFAULT 0
+  requires_payment_processor INTEGER DEFAULT 0
+  display_order INTEGER DEFAULT 0
+  is_cash_media INTEGER DEFAULT 0
+  is_card_media INTEGER DEFAULT 0
+  is_gift_media INTEGER DEFAULT 0
+
+EMC OPTION BITS:
+- Create table emc_option_flags in SQLite:
+  id TEXT PRIMARY KEY
+  enterprise_id TEXT NOT NULL
+  entity_type TEXT NOT NULL
+  entity_id TEXT NOT NULL
+  option_key TEXT NOT NULL
+  option_value TEXT
+  scope_level TEXT NOT NULL
+  scope_id TEXT
+  created_at TEXT DEFAULT (datetime('now'))
+  updated_at TEXT DEFAULT (datetime('now'))
+- Add UNIQUE index on:
+  (enterprise_id, entity_type, entity_id, option_key, scope_level, scope_id)
+
+RVCS PRINTING FLAGS (only if required by cloud/runtime):
+- Add:
+  receipt_print_mode TEXT DEFAULT 'auto_on_close'
+  receipt_copies INTEGER DEFAULT 1
+  kitchen_print_mode TEXT DEFAULT 'auto_on_send'
+  void_receipt_print INTEGER DEFAULT 1
+  require_guest_count INTEGER DEFAULT 0
+
+3) Backfill logic (SQLite):
+- Update tenders classification flags from tenders.type:
+  IF type='cash' => is_cash_media=1
+  IF type IN ('credit','debit') => is_card_media=1
+  IF type='gift' => is_gift_media=1
+- Also set behavioral defaults consistent with cloud:
+  IF type='cash' => pop_drawer=1, allow_over_tender=1
+  IF type IN ('credit','debit') => allow_tips=1
+  print_check_on_payment default stays 1
+
+STEP C — Make sure offline code reads the new flags
+- Any offline reporting or drawer logic must use:
+  tender.is_cash_media, tender.pop_drawer, tender.allow_tips, tender.allow_over_tender
+  NOT tender.type comparisons.
+- Any EMC option bits UI or offline config resolution must have SQLite support for emc_option_flags.
+
+STEP D — Verification
+Provide proof output:
+1) Show SQLite pragma table_info(tenders) includes new columns
+2) Show SQLite pragma table_info(rvcs) includes print columns (if added)
+3) Show emc_option_flags exists and unique index exists
+4) Show backfill ran: count of tenders where is_cash_media=1 etc.
+5) Ensure no duplicate CREATE TABLE rvcs exists in any schema initializer path.
