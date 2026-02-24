@@ -1,0 +1,99 @@
+C:\Windows\System32>cd C:\OnPoint-PosV30
+
+C:\OnPoint-PosV30>npm install
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: vite@7.3.1
+npm warn Found: @types/node@20.16.11
+npm warn node_modules/@types/node
+npm warn   dev @types/node@"20.16.11" from the root project
+npm warn   18 more (@types/fs-extra, stripe, @types/body-parser, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peerOptional @types/node@"^20.19.0 || >=22.12.0" from vite@7.3.1
+npm warn node_modules/vitest/node_modules/vite
+npm warn   vite@"^6.0.0 || ^7.0.0" from vitest@4.0.17
+npm warn   node_modules/vitest
+npm warn   1 more (@vitest/mocker)
+npm warn
+npm warn Conflicting peer dependency: @types/node@25.3.0
+npm warn node_modules/@types/node
+npm warn   peerOptional @types/node@"^20.19.0 || >=22.12.0" from vite@7.3.1
+npm warn   node_modules/vitest/node_modules/vite
+npm warn     vite@"^6.0.0 || ^7.0.0" from vitest@4.0.17
+npm warn     node_modules/vitest
+npm warn     1 more (@vitest/mocker)
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+npm warn deprecated lodash.isequal@4.5.0: This package is deprecated. Use require('node:util').isDeepStrictEqual instead.
+npm warn deprecated rimraf@2.7.1: Rimraf versions prior to v4 are no longer supported
+npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm warn deprecated boolean@3.2.0: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+npm warn deprecated fstream@1.0.12: This package is no longer supported.
+
+added 980 packages, and audited 981 packages in 1m
+
+141 packages are looking for funding
+  run `npm fund` for details
+
+14 vulnerabilities (7 moderate, 7 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+C:\OnPoint-PosV30>npm run build --win
+npm warn Unknown cli config "--win". This will stop working in the next major version of npm.
+
+> cloud-pos@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v5.4.20 building for production...
+transforming (4) src\App.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3633 modules transformed.
+../dist/public/index.html                            2.24 kB │ gzip:   0.89 kB
+../dist/public/assets/index-jYqtyPY5.css           105.78 kB │ gzip:  16.90 kB
+../dist/public/assets/offline-queue-eN96lbJU.js      2.07 kB │ gzip:   0.82 kB
+../dist/public/assets/index-CRs2wkkT.js          2,493.46 kB │ gzip: 605.66 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 34.39s
+building server...
+
+  dist\index.cjs  2.0mb
+
+Done in 6341ms
+
+C:\OnPoint-PosV30>npx electron-builder --config electron/electron-builder.json
+  • electron-builder  version=26.8.1 os=10.0.26200
+  • loaded configuration  file=C:\OnPoint-PosV30\electron\electron-builder.json
+  • writing effective config  file=electron-dist\builder-effective-config.yaml
+  • executing @electron/rebuild  electronVersion=40.2.1 arch=x64 buildFromSource=false workspaceRoot=C:\OnPoint-PosV30 projectDir=./ appDir=./
+  • installing native dependencies  arch=x64
+  • preparing       moduleName=@serialport/bindings-cpp arch=x64
+  ⨯ (node:4176) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Error: Could not find any Python installation to use
+    at PythonFinder.fail (C:\Users\DG\AppData\Local\npm-cache\_npx\009083ec26dc578f\node_modules\node-gyp\lib\find-python.js:306:11)
+    at PythonFinder.findPython (C:\Users\DG\AppData\Local\npm-cache\_npx\009083ec26dc578f\node_modules\node-gyp\lib\find-python.js:164:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async configure (C:\Users\DG\AppData\Local\npm-cache\_npx\009083ec26dc578f\node_modules\node-gyp\lib\configure.js:27:18)
+    at async process.<anonymous> (file:///C:/Users/DG/AppData/Local/npm-cache/_npx/009083ec26dc578f/node_modules/@electron/rebuild/lib/module-type/node-gyp/worker.js:22:13)
+
+
+  ⨯ node-gyp failed to rebuild 'C:\OnPoint-PosV30\node_modules\@serialport\bindings-cpp'  failedTask=build stackTrace=Error: node-gyp failed to rebuild 'C:\OnPoint-PosV30\node_modules\@serialport\bindings-cpp'
+    at ChildProcess.<anonymous> (file:///C:/Users/DG/AppData/Local/npm-cache/_npx/009083ec26dc578f/node_modules/@electron/rebuild/lib/module-type/node-gyp/node-gyp.js:114:24)
+    at ChildProcess.emit (node:events:508:28)
+    at ChildProcess._handle.onexit (node:internal/child_process:294:12)
+
+C:\OnPoint-PosV30>
