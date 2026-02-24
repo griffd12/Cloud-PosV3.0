@@ -1,7 +1,12 @@
-# Cloud POS System
+# Cloud POS System — V3.0
 
 ## Overview
 This project is an enterprise cloud-based Point of Sale (POS) system specifically designed for Quick Service Restaurants (QSRs) operating in high-volume environments. It delivers a scalable and robust solution with extensive administrative configuration capabilities and real-time operational features. The system supports a multi-property hierarchy, integrates with Kitchen Display Systems (KDS), and includes comprehensive enterprise functionalities such as fiscal close, cash management, gift cards, loyalty programs, inventory, forecasting, and online ordering integration. It employs a Simphony-class design for configuration inheritance with override capabilities and offers an optional Central Application Processing Service (CAPS) for hybrid cloud/on-premise offline resilience. The vision is to provide a highly flexible and reliable POS system deployable across various QSR operations, ensuring continuous service even in offline conditions, and supporting both web and native application environments (Android & Windows).
+
+## Current Version
+- **Cloud POS**: V3.0.0 (configuration-driven architecture)
+- **Electron Desktop**: v3.0.0 (electron-builder.json)
+- **Service-Host Schema**: V4 (tenders behavior/media, RVC print, emc_option_flags)
 
 ## GitHub Repository
 - **URL**: https://github.com/griffd12/Cloud-pos-V3.0
