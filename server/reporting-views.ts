@@ -62,6 +62,9 @@ export interface PaymentLine {
   tenderId: string;
   tenderName: string;
   tenderType: string;
+  isCashMedia: boolean;
+  isCardMedia: boolean;
+  isGiftMedia: boolean;
   amount: string;
   tipAmount: string;
   employeeId: string | null;
@@ -245,6 +248,9 @@ export async function getPaymentLines(filters: ReportFilters): Promise<PaymentLi
       cp.tender_id AS "tenderId",
       cp.tender_name AS "tenderName",
       t.type AS "tenderType",
+      COALESCE(t.is_cash_media, false) AS "isCashMedia",
+      COALESCE(t.is_card_media, false) AS "isCardMedia",
+      COALESCE(t.is_gift_media, false) AS "isGiftMedia",
       cp.amount,
       COALESCE(cp.tip_amount, 0) AS "tipAmount",
       cp.employee_id AS "employeeId",

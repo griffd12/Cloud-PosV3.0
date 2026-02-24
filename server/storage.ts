@@ -5437,9 +5437,9 @@ export class DatabaseStorage implements IStorage {
         if (payment.paymentStatus !== "completed") continue;
         const amountCents = Math.round(parseFloat(payment.amount || "0") * 100);
         const tender = await this.getTender(payment.tenderId);
-        if (tender?.type === "cash") {
+        if (tender?.isCashMedia) {
           cashExpectedCents += amountCents;
-        } else if (tender?.type === "credit" || tender?.type === "debit") {
+        } else if (tender?.isCardMedia) {
           cardTotalCents += amountCents;
         }
         tipsTotalCents += Math.round(parseFloat(payment.tipAmount || "0") * 100);

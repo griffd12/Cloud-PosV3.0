@@ -258,6 +258,21 @@ const configHelpRegistry: Record<string, ConfigHelpEntry> = {
     description: "When enabled, the full raw API response payload received from the payment gateway is logged. Used during certification to capture exact response data. Contains transaction details — disable after certification.",
     category: "Debug / Certification",
   },
+  isCashMedia: {
+    label: "Is Cash Media",
+    description: "When enabled, this tender is treated as cash for all reporting and cash drawer reconciliation calculations. Cash media tenders are included in cash drawer totals, change due calculations, and cash over/short reporting. Only enable this for tenders that represent physical cash or cash equivalents.",
+    category: "Tender Media Classification",
+  },
+  isCardMedia: {
+    label: "Is Card Media",
+    description: "When enabled, this tender is treated as a card payment for reporting purposes. Card media tenders appear in card settlement totals, and their tips are included in card tip pools and tip reporting. Enable this for credit cards, debit cards, and other electronic payment methods that go through a payment processor.",
+    category: "Tender Media Classification",
+  },
+  isGiftMedia: {
+    label: "Is Gift Media",
+    description: "When enabled, this tender is treated as a gift card for reporting and liability tracking. Gift media tenders are separated in gift card liability reports and redemption summaries. Enable this for gift cards, store credit, and similar prepaid instruments.",
+    category: "Tender Media Classification",
+  },
 };
 
 export function getConfigHelp(fieldName: string): ConfigHelpEntry | undefined {

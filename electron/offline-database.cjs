@@ -500,6 +500,23 @@ class OfflineDatabase {
         data TEXT NOT NULL,
         created_at TEXT DEFAULT (datetime('now'))
       );
+
+      -- EMC option flags cache
+      CREATE TABLE IF NOT EXISTS emc_option_flags (
+        id TEXT PRIMARY KEY,
+        enterprise_id TEXT,
+        entity_type TEXT,
+        entity_id TEXT,
+        option_key TEXT,
+        value_text TEXT,
+        scope_level TEXT,
+        scope_id TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_emc_option_flags_unique
+        ON emc_option_flags (enterprise_id, entity_type, entity_id, option_key, scope_level, scope_id);
     `);
   }
 
@@ -700,6 +717,7 @@ class OfflineDatabase {
       { table: 'modifier_group_modifiers', url: `/api/sync/modifier-group-modifiers` },
       { table: 'menu_item_modifier_groups', url: `/api/sync/menu-item-modifier-groups` },
       { table: 'menu_item_recipe_ingredients', url: `/api/sync/menu-item-recipe-ingredients` },
+      { table: 'emc_option_flags', url: `/api/option-flags?enterpriseId=${enterpriseId}` },
     ];
 
     if (propertyId) {
@@ -737,7 +755,11 @@ class OfflineDatabase {
           const data = await response.json();
           if (ep.table) {
             const items = Array.isArray(data) ? data : [data];
-            this.cacheEntityList(ep.table, items, enterpriseId);
+            if (ep.table === 'emc_option_flags') {
+              this.cacheOptionFlags(items, enterpriseId);
+            } else {
+              this.cacheEntityList(ep.table, items, enterpriseId);
+            }
             results.synced.push({ table: ep.table, count: items.length });
           } else if (ep.key) {
             this.cacheConfigData(ep.key, data, enterpriseId, propertyId, rvcId);
@@ -1180,6 +1202,103 @@ class OfflineDatabase {
     }
   }
 
+  cacheOptionFlags(items, enterpriseId) {
+    if (!this.usingSqlite) {
+      this.cacheConfigData('emc_option_flags', items, enterpriseId);
+      return;
+    }
+
+    try {
+      const insert = this.db.prepare(`
+        INSERT OR REPLACE INTO emc_option_flags (id, enterprise_id, entity_type, entity_id, option_key, value_text, scope_level, scope_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      const tx = this.db.transaction((rows) => {
+        for (const item of rows) {
+          insert.run(
+            item.id,
+            item.enterpriseId || enterpriseId || null,
+            item.entityType || null,
+            item.entityId || null,
+            item.optionKey || null,
+            item.valueText != null ? String(item.valueText) : null,
+            item.scopeLevel || null,
+            item.scopeId || null,
+            item.createdAt || null,
+            item.updatedAt || null
+          );
+        }
+      });
+
+      tx(items);
+    } catch (e) {
+      offlineDbLogger.error('Cache', 'Cache emc_option_flags error', e.message);
+      this.cacheConfigData('emc_option_flags', items, enterpriseId);
+    }
+  }
+
+  getOptionFlags(enterpriseId) {
+    if (!this.usingSqlite) {
+      return this.getCachedConfig('emc_option_flags') || [];
+    }
+
+    try {
+      let rows;
+      if (enterpriseId) {
+        rows = this.db.prepare('SELECT * FROM emc_option_flags WHERE enterprise_id = ?').all(enterpriseId);
+      } else {
+        rows = this.db.prepare('SELECT * FROM emc_option_flags').all();
+      }
+      return rows.map(r => ({
+        id: r.id,
+        enterpriseId: r.enterprise_id,
+        entityType: r.entity_type,
+        entityId: r.entity_id,
+        optionKey: r.option_key,
+        valueText: r.value_text,
+        scopeLevel: r.scope_level,
+        scopeId: r.scope_id,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      }));
+    } catch (e) {
+      offlineDbLogger.error('OptionFlags', 'Get option flags error', e.message);
+      return this.getCachedConfig('emc_option_flags') || [];
+    }
+  }
+
+  resolveOptionFlag(entityType, entityId, optionKey, scopeChain) {
+    const SCOPE_PRIORITY = ['workstation', 'rvc', 'property', 'enterprise'];
+
+    try {
+      const allFlags = this.getOptionFlags();
+      const matching = allFlags.filter(f =>
+        f.entityType === entityType &&
+        f.entityId === entityId &&
+        f.optionKey === optionKey
+      );
+
+      if (matching.length === 0) return null;
+
+      for (const scopeLevel of SCOPE_PRIORITY) {
+        const scopeId = scopeChain && scopeChain[scopeLevel];
+        if (!scopeId) continue;
+
+        const flag = matching.find(f => f.scopeLevel === scopeLevel && f.scopeId === scopeId);
+        if (flag) return flag.valueText;
+      }
+
+      const enterpriseFlag = matching.find(f => f.scopeLevel === 'enterprise');
+      if (enterpriseFlag) return enterpriseFlag.valueText;
+
+      return matching[0].valueText;
+    } catch (e) {
+      offlineDbLogger.error('OptionFlags', 'Resolve option flag error', e.message);
+      return null;
+    }
+  }
+
   getLocalSalesData(businessDate, rvcId) {
     try {
       if (this.usingSqlite) {
@@ -1207,12 +1326,27 @@ class OfflineDatabase {
           'SELECT data FROM offline_payments WHERE synced = 0' + (businessDate ? " AND created_at LIKE ?" : '')
         ).all(...(businessDate ? [`${businessDate}%`] : [])).map(r => JSON.parse(r.data));
 
+        const tenders = this.getEntityList('tender_types', null);
+        const tenderMap = {};
+        for (const t of tenders) {
+          tenderMap[t.id] = t;
+        }
+
         const paymentsByTender = {};
+        let cashTotal = 0;
+        let cardTotal = 0;
         payments.forEach(p => {
           const name = p.tenderName || 'Unknown';
           if (!paymentsByTender[name]) paymentsByTender[name] = { count: 0, total: 0 };
           paymentsByTender[name].count++;
-          paymentsByTender[name].total += parseFloat(p.amount || 0);
+          const amt = parseFloat(p.amount || 0);
+          paymentsByTender[name].total += amt;
+
+          const tender = p.tenderId ? tenderMap[p.tenderId] : null;
+          if (tender) {
+            if (tender.isCashMedia) cashTotal += amt;
+            if (tender.isCardMedia) cardTotal += amt;
+          }
         });
 
         return {
@@ -1224,6 +1358,8 @@ class OfflineDatabase {
           checkCount,
           itemCount,
           paymentsByTender,
+          cashTotal: cashTotal.toFixed(2),
+          cardTotal: cardTotal.toFixed(2),
           isOfflineData: true,
         };
       }

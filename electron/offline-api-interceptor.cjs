@@ -66,6 +66,7 @@ class OfflineApiInterceptor {
         /^\/api\/time-punches\/status/,
         /^\/api\/employees\/[^/]+\/job-codes\/details/,
         /^\/api\/system-status/,
+        /^\/api\/option-flags/,
       ];
       return readEndpoints.some(re => re.test(pathname));
     }
@@ -376,6 +377,12 @@ class OfflineApiInterceptor {
           .filter(Boolean);
         return { status: 200, data: result };
       }
+    }
+
+    if (pathname === '/api/option-flags' || pathname.match(/^\/api\/option-flags/)) {
+      const enterpriseId = query?.enterpriseId || this.config.enterpriseId;
+      const flags = this.db.getOptionFlags(enterpriseId);
+      return { status: 200, data: flags };
     }
 
     if (pathname === '/api/offline/sales-report') {

@@ -603,6 +603,9 @@ export const tenders = pgTable("tenders", {
   requireManagerApproval: boolean("require_manager_approval").default(false),
   requiresPaymentProcessor: boolean("requires_payment_processor").default(false),
   displayOrder: integer("display_order").default(0),
+  isCashMedia: boolean("is_cash_media").default(false),
+  isCardMedia: boolean("is_card_media").default(false),
+  isGiftMedia: boolean("is_gift_media").default(false),
 });
 
 // Payment Transactions - tracks all gateway communications (NO card data stored)

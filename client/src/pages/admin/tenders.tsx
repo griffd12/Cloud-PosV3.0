@@ -106,6 +106,9 @@ export default function TendersPage() {
       visibleWhen: { field: "type", values: ["credit", "debit"] },
     },
     { name: "active", label: "Active", type: "switch", defaultValue: true },
+    { name: "isCashMedia", label: "Is Cash Media", type: "switch", defaultValue: false, description: "Classifies this tender as cash for reporting and cash drawer reconciliation." },
+    { name: "isCardMedia", label: "Is Card Media", type: "switch", defaultValue: false, description: "Classifies this tender as a card payment for card settlement and tip reporting." },
+    { name: "isGiftMedia", label: "Is Gift Media", type: "switch", defaultValue: false, description: "Classifies this tender as a gift card for gift liability tracking." },
   ];
 
   const createMutation = useMutation({

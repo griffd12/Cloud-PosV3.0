@@ -60,7 +60,7 @@ export function registerReportingRoutes(app: Express, storage: any) {
 
       const cardTips = round2(
         paymentLines
-          .filter(l => l.tenderType === "credit" || l.tenderType === "debit")
+          .filter(l => l.isCardMedia)
           .reduce((s, l) => s + num(l.tipAmount), 0)
       );
 
@@ -97,7 +97,7 @@ export function registerReportingRoutes(app: Express, storage: any) {
           SELECT cp.check_id, SUM(cp.amount) AS pmt_total
           FROM check_payments cp
           JOIN tenders t ON t.id = cp.tender_id
-          WHERE t.type = 'cash' AND cp.payment_status = 'completed'
+          WHERE t.is_cash_media = true AND cp.payment_status = 'completed'
           GROUP BY cp.check_id
         ) pmt ON pmt.check_id = c.id
         WHERE c.business_date = ${businessDate}
@@ -110,7 +110,7 @@ export function registerReportingRoutes(app: Express, storage: any) {
       const checkTotals = round2(num((changeDueResult.rows[0] as any)?.checkTotals));
 
       const cashTendered = round2(
-        paymentLines.filter(l => l.tenderType === "cash").reduce((s, l) => s + num(l.amount), 0)
+        paymentLines.filter(l => l.isCashMedia).reduce((s, l) => s + num(l.amount), 0)
       );
       const netCashCollected = round2(cashTendered - changeDue);
 
@@ -388,17 +388,17 @@ export function registerReportingRoutes(app: Express, storage: any) {
 
         const cardTips = round2(
           empPayments
-            .filter(l => l.tenderType === "credit" || l.tenderType === "debit")
+            .filter(l => l.isCardMedia)
             .reduce((s, l) => s + num(l.tipAmount), 0)
         );
         const declaredCashTips = round2(empTimecards.reduce((s, l) => s + num(l.declaredCashTips), 0));
 
         const cashTendered = round2(
-          empPayments.filter(l => l.tenderType === "cash").reduce((s, l) => s + num(l.amount), 0)
+          empPayments.filter(l => l.isCashMedia).reduce((s, l) => s + num(l.amount), 0)
         );
         const cardCollected = round2(
           empPayments
-            .filter(l => l.tenderType === "credit" || l.tenderType === "debit")
+            .filter(l => l.isCardMedia)
             .reduce((s, l) => s + num(l.amount), 0)
         );
         const totalCollected = round2(empPayments.reduce((s, l) => s + num(l.amount), 0));
@@ -586,7 +586,7 @@ export function registerReportingRoutes(app: Express, storage: any) {
 
       const cardTips = round2(
         paymentLines
-          .filter(l => l.tenderType === "credit" || l.tenderType === "debit")
+          .filter(l => l.isCardMedia)
           .reduce((s, l) => s + num(l.tipAmount), 0)
       );
       const declaredCashTips = round2(timecardLines.reduce((s, l) => s + num(l.declaredCashTips), 0));
@@ -606,7 +606,7 @@ export function registerReportingRoutes(app: Express, storage: any) {
           SELECT cp.check_id, SUM(cp.amount) AS pmt_total
           FROM check_payments cp
           JOIN tenders t ON t.id = cp.tender_id
-          WHERE t.type = 'cash' AND cp.payment_status = 'completed'
+          WHERE t.is_cash_media = true AND cp.payment_status = 'completed'
           GROUP BY cp.check_id
         ) pmt ON pmt.check_id = c.id
         WHERE c.business_date = ${businessDate}
@@ -619,7 +619,7 @@ export function registerReportingRoutes(app: Express, storage: any) {
       const checkTotals = round2(num((changeDueResult.rows[0] as any)?.checkTotals));
 
       const cashTendered = round2(
-        paymentLines.filter(l => l.tenderType === "cash").reduce((s, l) => s + num(l.amount), 0)
+        paymentLines.filter(l => l.isCashMedia).reduce((s, l) => s + num(l.amount), 0)
       );
       const netCashCollected = round2(cashTendered - changeDue);
       const netCollected = round2(totalCollected - changeDue);
@@ -798,7 +798,7 @@ export function registerReportingRoutes(app: Express, storage: any) {
 
       const totalPoolableTips = round2(
         paymentLines
-          .filter(l => l.tenderType === "credit" || l.tenderType === "debit")
+          .filter(l => l.isCardMedia)
           .reduce((s, l) => s + num(l.tipAmount), 0)
       );
 
@@ -926,7 +926,7 @@ export function registerReportingRoutes(app: Express, storage: any) {
         JOIN checks c ON c.id = cp.check_id
         JOIN rvcs r ON r.id = c.rvc_id
         JOIN tenders t ON t.id = cp.tender_id
-        WHERE t.type = 'cash'
+        WHERE t.is_cash_media = true
           AND cp.payment_status = 'completed'
           AND (c.test_mode = false OR c.test_mode IS NULL)
           AND COALESCE(cp.business_date, c.business_date) = ${businessDate}
@@ -1024,7 +1024,7 @@ export function registerReportingRoutes(app: Express, storage: any) {
       const reconServiceCharges = round2(scLines.reduce((s, l) => s + num(l.amount), 0));
       const reconCardTips = round2(
         pmtLines
-          .filter(l => l.tenderType === "credit" || l.tenderType === "debit")
+          .filter(l => l.isCardMedia)
           .reduce((s, l) => s + num(l.tipAmount), 0)
       );
       const reconTotalPayments = round2(pmtLines.reduce((s, l) => s + num(l.amount), 0));
@@ -1040,7 +1040,7 @@ export function registerReportingRoutes(app: Express, storage: any) {
           SELECT cp.check_id, SUM(cp.amount) AS pmt_total
           FROM check_payments cp
           JOIN tenders t ON t.id = cp.tender_id
-          WHERE t.type = 'cash' AND cp.payment_status = 'completed'
+          WHERE t.is_cash_media = true AND cp.payment_status = 'completed'
           GROUP BY cp.check_id
         ) pmt ON pmt.check_id = c.id
         WHERE c.business_date = ${businessDate}
@@ -1106,7 +1106,7 @@ export function registerReportingRoutes(app: Express, storage: any) {
           SELECT cp.check_id, SUM(cp.amount) AS cash_total
           FROM check_payments cp
           JOIN tenders t ON t.id = cp.tender_id
-          WHERE t.type = 'cash' AND cp.payment_status = 'completed'
+          WHERE t.is_cash_media = true AND cp.payment_status = 'completed'
           GROUP BY cp.check_id
         ) cash_pmt ON cash_pmt.check_id = c.id
         WHERE c.business_date = ${businessDate}
