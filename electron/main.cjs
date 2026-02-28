@@ -2385,10 +2385,18 @@ function registerProtocolInterceptor() {
       }
     }
 
+    if (!isOnline && !isApiRequest) {
+      const cached = getCachedResponseFromDisk(url.pathname);
+      if (cached) {
+        appLogger.debug('PageCache', `Serving cached (offline): ${url.pathname}`);
+        return cached;
+      }
+    }
+
     const failoverClone = isApiRequest ? request.clone() : null;
 
     try {
-      const response = await electronNet.fetch(request, { bypassCustomProtocolHandlers: true });
+      const response = await electronNet.fetch(request, { bypassCustomProtocolHandlers: true, signal: AbortSignal.timeout(8000) });
 
       if (response.ok && request.method === 'GET' && !isApiRequest) {
         const cloned = response.clone();
@@ -2522,7 +2530,19 @@ async function initAllServices() {
     setupAutoLaunch(true);
   }
 
-  syncInterval = setInterval(checkConnectivity, 30000);
+  syncInterval = setInterval(() => {
+    checkConnectivity();
+    if (connectionMode !== 'green' && syncInterval) {
+      clearInterval(syncInterval);
+      syncInterval = setInterval(() => {
+        checkConnectivity();
+        if (connectionMode === 'green' && syncInterval) {
+          clearInterval(syncInterval);
+          syncInterval = setInterval(() => checkConnectivity(), 30000);
+        }
+      }, 15000);
+    }
+  }, 30000);
   checkConnectivity();
 
   syncTimer = setInterval(syncOfflineData, 60000);
