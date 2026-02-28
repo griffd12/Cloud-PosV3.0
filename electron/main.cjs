@@ -10,6 +10,8 @@ const { OfflineApiInterceptor } = require('./offline-api-interceptor.cjs');
 const { appLogger, printLogger, updaterLogger, LOG_DIR } = require('./logger.cjs');
 const { initAutoUpdater, getUpdateState } = require('./auto-updater.cjs');
 
+const { fork } = require('child_process');
+
 let mainWindow = null;
 let appMode = 'pos';
 let isKiosk = false;
@@ -23,6 +25,9 @@ let isOnline = true;
 let emvManager = null;
 let dataSyncInterval = null;
 let protocolInterceptorRegistered = false;
+let serviceHostProcess = null;
+let connectionMode = 'green';
+let capsConfig = null;
 
 const APP_DATA_ROOT = process.platform === 'win32'
   ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Cloud POS')
@@ -334,8 +339,13 @@ async function checkConnectivity() {
       offlineInterceptor.setOffline(!isOnline);
     }
 
+    if (isOnline) {
+      setConnectionMode('green');
+    }
+
     if (wasOffline && isOnline) {
       appLogger.info('Network', 'Connection restored, syncing offline data');
+      setConnectionMode('green');
       syncOfflineData();
       if (enhancedOfflineDb) {
         enhancedOfflineDb.syncToCloud(serverUrl).then(result => {
@@ -346,14 +356,52 @@ async function checkConnectivity() {
       }
     }
   } catch (e) {
+    const wasOnline = isOnline;
     isOnline = false;
     if (offlineInterceptor) {
       offlineInterceptor.setOffline(true);
+    }
+
+    if (wasOnline) {
+      appLogger.warn('Network', `Cloud connection lost: ${e.message}`);
+    }
+
+    const config = loadConfig();
+    const serviceHostUrl = config.serviceHostUrl;
+    if (serviceHostUrl) {
+      try {
+        const capsCheck = await fetch(`${serviceHostUrl}/health`, {
+          signal: AbortSignal.timeout(3000),
+        });
+        if (capsCheck.ok) {
+          setConnectionMode('yellow');
+          if (offlineInterceptor) {
+            offlineInterceptor.setServiceHostUrl(serviceHostUrl);
+            offlineInterceptor.setConnectionMode('yellow');
+          }
+        } else {
+          setConnectionMode('red');
+          if (offlineInterceptor) {
+            offlineInterceptor.setConnectionMode('red');
+          }
+        }
+      } catch {
+        setConnectionMode('red');
+        if (offlineInterceptor) {
+          offlineInterceptor.setConnectionMode('red');
+        }
+      }
+    } else {
+      setConnectionMode('red');
+      if (offlineInterceptor) {
+        offlineInterceptor.setConnectionMode('red');
+      }
     }
   }
 
   if (mainWindow) {
     mainWindow.webContents.send('online-status', isOnline);
+    mainWindow.webContents.send('connection-mode', connectionMode);
   }
 }
 
@@ -555,6 +603,7 @@ function createWindow() {
     if (errorCode === -106 || errorCode === -105 || errorCode === -2) {
       isOnline = false;
       if (offlineInterceptor) offlineInterceptor.setOffline(true);
+      checkConnectivity();
     }
 
     const serverUrl = getServerUrl();
@@ -579,6 +628,7 @@ button:hover{background:#3a3a5a}.info{margin-top:20px;font-size:12px;opacity:0.4
     const url = mainWindow.webContents.getURL();
     if (!url.startsWith('data:')) {
       appLogger.info('Window', `Page loaded successfully: ${url}`);
+      injectServiceHostUrl();
     }
   });
 }
@@ -749,7 +799,12 @@ function setupIpcHandlers() {
       mode: appMode,
       isKiosk,
       isOnline,
+      connectionMode,
       serverUrl: getServerUrl(),
+      serviceHostUrl: config.serviceHostUrl || null,
+      capsWorkstationId: config.capsWorkstationId || null,
+      capsWorkstationName: config.capsWorkstationName || null,
+      isCapsWorkstation: config.isCapsWorkstation || false,
       platform: process.platform,
       version: app.getVersion(),
       dataDir: DATA_DIR,
@@ -1928,6 +1983,223 @@ async function performInitialDataSync() {
   }
 }
 
+async function fetchActivationConfig() {
+  const config = loadConfig();
+  if (!config.deviceId || !config.setupComplete) {
+    appLogger.info('CAPS', 'No device ID or setup not complete, skipping activation-config');
+    return null;
+  }
+
+  try {
+    const serverUrl = getServerUrl();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const response = await fetch(`${serverUrl}/api/workstations/${config.deviceId}/activation-config`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      appLogger.warn('CAPS', `Activation-config returned ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    const connConfig = data.connectionConfig || {};
+    const serviceHostUrl = connConfig.serviceHostUrl || null;
+    const capsWorkstationId = connConfig.capsWorkstationId || null;
+    const capsWorkstationName = connConfig.capsWorkstationName || null;
+    const isCapsWorkstation = capsWorkstationId && capsWorkstationId === config.deviceId;
+
+    const effectiveServiceHostUrl = isCapsWorkstation ? 'http://127.0.0.1:3001' : serviceHostUrl;
+
+    capsConfig = {
+      serviceHostUrl: effectiveServiceHostUrl,
+      capsWorkstationId,
+      capsWorkstationName,
+      isCapsWorkstation: !!isCapsWorkstation,
+      propertyId: config.propertyId,
+      serviceHostId: data.serviceHost?.id || null,
+    };
+
+    config.serviceHostUrl = effectiveServiceHostUrl;
+    config.capsWorkstationId = capsWorkstationId;
+    config.capsWorkstationName = capsWorkstationName;
+    config.isCapsWorkstation = !!isCapsWorkstation;
+    saveConfig(config);
+
+    if (offlineInterceptor) {
+      offlineInterceptor.setServiceHostUrl(effectiveServiceHostUrl);
+      offlineInterceptor.setCapsConfig(capsConfig);
+    }
+
+    appLogger.info('CAPS', `Activation config fetched`, {
+      serviceHostUrl: effectiveServiceHostUrl,
+      capsWorkstationId,
+      capsWorkstationName,
+      isCaps: !!isCapsWorkstation,
+    });
+
+    return capsConfig;
+  } catch (e) {
+    appLogger.warn('CAPS', `Failed to fetch activation-config: ${e.message}`);
+    const config = loadConfig();
+    if (config.serviceHostUrl) {
+      capsConfig = {
+        serviceHostUrl: config.serviceHostUrl,
+        capsWorkstationId: config.capsWorkstationId || null,
+        capsWorkstationName: config.capsWorkstationName || null,
+        isCapsWorkstation: config.isCapsWorkstation || false,
+        propertyId: config.propertyId,
+        serviceHostId: null,
+      };
+      if (offlineInterceptor) {
+        offlineInterceptor.setServiceHostUrl(config.serviceHostUrl);
+        offlineInterceptor.setCapsConfig(capsConfig);
+      }
+      appLogger.info('CAPS', 'Using cached activation config', { serviceHostUrl: config.serviceHostUrl });
+    }
+    return capsConfig;
+  }
+}
+
+async function startServiceHost() {
+  if (!capsConfig || !capsConfig.isCapsWorkstation) {
+    return;
+  }
+
+  const config = loadConfig();
+  const serviceHostBundlePath = path.join(__dirname, 'service-host-embedded.cjs');
+
+  if (!fs.existsSync(serviceHostBundlePath)) {
+    appLogger.warn('ServiceHost', 'Service host bundle not found, CAPS mode unavailable', { path: serviceHostBundlePath });
+    return;
+  }
+
+  if (serviceHostProcess) {
+    appLogger.info('ServiceHost', 'Service host already running');
+    return;
+  }
+
+  const serviceHostDataDir = path.join(DATA_DIR, 'service-host');
+  if (!fs.existsSync(serviceHostDataDir)) {
+    fs.mkdirSync(serviceHostDataDir, { recursive: true });
+  }
+
+  const serverUrl = getServerUrl();
+
+  try {
+    appLogger.info('ServiceHost', 'Starting embedded service host (CAPS mode)', {
+      dataDir: serviceHostDataDir,
+      port: 3001,
+      cloudUrl: serverUrl,
+    });
+
+    serviceHostProcess = fork(serviceHostBundlePath, [], {
+      env: {
+        ...process.env,
+        SERVICE_HOST_PORT: '3001',
+        SERVICE_HOST_DATA_DIR: serviceHostDataDir,
+        SERVICE_HOST_CLOUD_URL: serverUrl,
+        SERVICE_HOST_PROPERTY_ID: config.propertyId || '',
+        SERVICE_HOST_ID: capsConfig.serviceHostId || config.deviceId || '',
+        SERVICE_HOST_TOKEN: config.serviceHostToken || '',
+      },
+      stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+    });
+
+    serviceHostProcess.stdout.on('data', (data) => {
+      appLogger.info('ServiceHost', data.toString().trim());
+    });
+
+    serviceHostProcess.stderr.on('data', (data) => {
+      appLogger.warn('ServiceHost', data.toString().trim());
+    });
+
+    serviceHostProcess.on('exit', (code, signal) => {
+      appLogger.warn('ServiceHost', `Service host process exited`, { code, signal });
+      serviceHostProcess = null;
+      if (code !== 0 && code !== null) {
+        setTimeout(() => {
+          appLogger.info('ServiceHost', 'Restarting service host after crash...');
+          startServiceHost();
+        }, 5000);
+      }
+    });
+
+    serviceHostProcess.on('error', (err) => {
+      appLogger.error('ServiceHost', `Service host process error: ${err.message}`);
+      serviceHostProcess = null;
+    });
+
+    let ready = false;
+    for (let i = 0; i < 20; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      try {
+        const hc = await fetch('http://127.0.0.1:3001/health', {
+          signal: AbortSignal.timeout(2000),
+        });
+        if (hc.ok) {
+          ready = true;
+          break;
+        }
+      } catch {}
+    }
+
+    if (ready) {
+      appLogger.info('ServiceHost', 'Service host is ready on port 3001 (CAPS mode)');
+    } else {
+      appLogger.warn('ServiceHost', 'Service host started but health check not responding yet');
+    }
+  } catch (e) {
+    appLogger.error('ServiceHost', `Failed to start service host: ${e.message}`);
+  }
+}
+
+function stopServiceHost() {
+  if (serviceHostProcess) {
+    appLogger.info('ServiceHost', 'Stopping service host process');
+    serviceHostProcess.kill('SIGTERM');
+    setTimeout(() => {
+      if (serviceHostProcess) {
+        serviceHostProcess.kill('SIGKILL');
+        serviceHostProcess = null;
+      }
+    }, 5000);
+  }
+}
+
+function setConnectionMode(newMode) {
+  if (connectionMode === newMode) return;
+  const oldMode = connectionMode;
+  connectionMode = newMode;
+  appLogger.info('CAPS', `Connection mode: ${oldMode} -> ${newMode}`);
+  if (mainWindow) {
+    mainWindow.webContents.send('connection-mode', newMode);
+  }
+}
+
+function getCapsServiceHostUrl() {
+  const config = loadConfig();
+  return config.serviceHostUrl || (capsConfig && capsConfig.serviceHostUrl) || null;
+}
+
+function injectServiceHostUrl() {
+  if (!mainWindow) return;
+  const config = loadConfig();
+  const serviceHostUrl = config.serviceHostUrl || null;
+  if (serviceHostUrl) {
+    const safeUrl = JSON.stringify(serviceHostUrl);
+    mainWindow.webContents.executeJavaScript(
+      `try { localStorage.setItem('serviceHostUrl', ${safeUrl}); } catch(e) {}`
+    ).catch(() => {});
+  }
+  const safeMode = JSON.stringify(connectionMode);
+  mainWindow.webContents.executeJavaScript(
+    `try { localStorage.setItem('connectionMode', ${safeMode}); } catch(e) {}`
+  ).catch(() => {});
+}
+
 const PAGE_CACHE_DIR = path.join(DATA_DIR, 'page-cache');
 
 function ensurePageCacheDir() {
@@ -2074,10 +2346,39 @@ function registerProtocolInterceptor() {
 
     const isApiRequest = url.pathname.startsWith('/api/');
 
-    if (!isOnline && isApiRequest && offlineInterceptor) {
-      appLogger.info('Interceptor', `OFFLINE API: ${request.method} ${url.pathname}`);
-      const body = await parseRequestBody(request);
-      return routeToOfflineInterceptor(request.method, url, body);
+    if (!isOnline && isApiRequest) {
+      const capsUrl = getCapsServiceHostUrl();
+      if (capsUrl && connectionMode === 'yellow') {
+        try {
+          const capsApiUrl = `${capsUrl}${url.pathname}${url.search}`;
+          appLogger.info('Interceptor', `YELLOW mode -> CAPS: ${request.method} ${url.pathname}`);
+          const capsHeaders = {};
+          for (const [key, value] of request.headers.entries()) {
+            if (key.toLowerCase() !== 'host') capsHeaders[key] = value;
+          }
+          const capsResponse = await fetch(capsApiUrl, {
+            method: request.method,
+            headers: capsHeaders,
+            body: request.method !== 'GET' && request.method !== 'HEAD' ? await request.arrayBuffer() : undefined,
+            signal: AbortSignal.timeout(10000),
+          });
+          return new Response(capsResponse.body, {
+            status: capsResponse.status,
+            statusText: capsResponse.statusText,
+            headers: { ...Object.fromEntries(capsResponse.headers.entries()), 'X-Connection-Mode': 'yellow' },
+          });
+        } catch (capsError) {
+          appLogger.warn('Interceptor', `CAPS proxy failed: ${capsError.message}, falling to RED`);
+          setConnectionMode('red');
+          if (offlineInterceptor) offlineInterceptor.setConnectionMode('red');
+        }
+      }
+
+      if (offlineInterceptor) {
+        appLogger.info('Interceptor', `RED mode -> local: ${request.method} ${url.pathname}`);
+        const body = await parseRequestBody(request);
+        return routeToOfflineInterceptor(request.method, url, body);
+      }
     }
 
     const failoverClone = isApiRequest ? request.clone() : null;
@@ -2093,6 +2394,7 @@ function registerProtocolInterceptor() {
       if (!isOnline && response.ok) {
         isOnline = true;
         if (offlineInterceptor) offlineInterceptor.setOffline(false);
+        setConnectionMode('green');
         if (mainWindow) mainWindow.webContents.send('online-status', true);
         appLogger.info('Network', 'Connection restored via protocol handler');
         syncOfflineData();
@@ -2107,10 +2409,49 @@ function registerProtocolInterceptor() {
         appLogger.warn('Network', `Connection lost: ${networkError.message}`);
       }
 
-      if (isApiRequest && offlineInterceptor && failoverClone) {
-        appLogger.info('Interceptor', `FAILOVER API: ${request.method} ${url.pathname}`);
-        const body = await parseRequestBody(failoverClone);
-        return routeToOfflineInterceptor(request.method, url, body);
+      if (isApiRequest) {
+        const capsUrl = getCapsServiceHostUrl();
+        if (capsUrl) {
+          try {
+            const capsApiUrl = `${capsUrl}${url.pathname}${url.search}`;
+            appLogger.info('Interceptor', `FAILOVER YELLOW -> CAPS: ${request.method} ${url.pathname}`);
+            const capsHeaders = {};
+            if (failoverClone) {
+              for (const [key, value] of failoverClone.headers.entries()) {
+                if (key.toLowerCase() !== 'host') capsHeaders[key] = value;
+              }
+            }
+            const capsBody = failoverClone && request.method !== 'GET' && request.method !== 'HEAD'
+              ? await failoverClone.arrayBuffer()
+              : undefined;
+            const capsResponse = await fetch(capsApiUrl, {
+              method: request.method,
+              headers: capsHeaders,
+              body: capsBody,
+              signal: AbortSignal.timeout(10000),
+            });
+            setConnectionMode('yellow');
+            if (offlineInterceptor) offlineInterceptor.setConnectionMode('yellow');
+            return new Response(capsResponse.body, {
+              status: capsResponse.status,
+              statusText: capsResponse.statusText,
+              headers: { ...Object.fromEntries(capsResponse.headers.entries()), 'X-Connection-Mode': 'yellow' },
+            });
+          } catch (capsErr) {
+            appLogger.warn('Interceptor', `CAPS also unreachable: ${capsErr.message}, falling to RED`);
+            setConnectionMode('red');
+            if (offlineInterceptor) offlineInterceptor.setConnectionMode('red');
+          }
+        } else {
+          setConnectionMode('red');
+          if (offlineInterceptor) offlineInterceptor.setConnectionMode('red');
+        }
+
+        if (offlineInterceptor && failoverClone) {
+          appLogger.info('Interceptor', `RED FAILOVER: ${request.method} ${url.pathname}`);
+          const body = await parseRequestBody(failoverClone);
+          return routeToOfflineInterceptor(request.method, url, body);
+        }
       }
 
       const cached = getCachedResponseFromDisk(url.pathname);
@@ -2156,6 +2497,18 @@ async function initAllServices() {
 
   appLogger.info('App', 'Initializing services after setup verification');
 
+  if (config.serviceHostUrl) {
+    capsConfig = {
+      serviceHostUrl: config.serviceHostUrl,
+      capsWorkstationId: config.capsWorkstationId || null,
+      capsWorkstationName: config.capsWorkstationName || null,
+      isCapsWorkstation: config.isCapsWorkstation || false,
+      propertyId: config.propertyId,
+      serviceHostId: null,
+    };
+    appLogger.info('CAPS', 'Loaded cached CAPS config', { serviceHostUrl: config.serviceHostUrl, isCaps: config.isCapsWorkstation });
+  }
+
   initOfflineDatabase();
   await initEnhancedOfflineDb();
   emvManager = new EMVTerminalManager(DATA_DIR);
@@ -2184,6 +2537,20 @@ async function initAllServices() {
   }, 300000);
 
   await performInitialDataSync();
+
+  await fetchActivationConfig();
+  if (!capsConfig && config.isCapsWorkstation && config.serviceHostUrl) {
+    capsConfig = {
+      serviceHostUrl: config.serviceHostUrl,
+      capsWorkstationId: config.capsWorkstationId || null,
+      capsWorkstationName: config.capsWorkstationName || null,
+      isCapsWorkstation: true,
+      propertyId: config.propertyId,
+      serviceHostId: null,
+    };
+    appLogger.info('CAPS', 'Using cached CAPS config after activation-config failure');
+  }
+  await startServiceHost();
 
   try {
     initAutoUpdater(updaterLogger);
@@ -2239,6 +2606,7 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   appLogger.info('App', 'Application shutting down');
+  stopServiceHost();
   if (syncInterval) clearInterval(syncInterval);
   if (syncTimer) clearInterval(syncTimer);
   if (dataSyncInterval) clearInterval(dataSyncInterval);

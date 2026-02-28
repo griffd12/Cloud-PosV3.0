@@ -30,6 +30,9 @@ jobs:
       - name: Run prebuild cleanup
         run: node electron/prebuild-cleanup.cjs
 
+      - name: Build service-host bundle
+        run: node electron/build-service-host.cjs
+
       - name: Extract version
         id: version
         shell: bash

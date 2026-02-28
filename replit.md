@@ -1,4 +1,4 @@
-# Cloud POS System — V3.0
+# Cloud POS System — V3.1
 
 ## Overview
 This project is an enterprise cloud-based Point of Sale (POS) system for Quick Service Restaurants (QSRs) in high-volume environments. It provides a scalable solution with extensive administrative configuration and real-time operational features, supporting a multi-property hierarchy, KDS integration, and enterprise functionalities like fiscal close, cash management, gift cards, loyalty, inventory, forecasting, and online ordering integration. The system uses a Simphony-class design for configuration inheritance with override capabilities and offers an optional Central Application Processing Service (CAPS) for hybrid cloud/on-premise offline resilience. Its vision is to be a highly flexible and reliable POS system for various QSR operations, ensuring continuous service even offline, and supporting both web and native applications (Android & Windows).
@@ -53,6 +53,8 @@ Preferred communication style: Simple, everyday language.
 - **Offline Reporting**: `GET /api/caps/reports/daily-summary` returns key metrics from local SQLite.
 - **Proof Mode**: Automated 8-phase verification for schema init, config seeding, offline POS/KDS operations, tender/close, journal integrity, persistence, and idempotency.
 - **Property-Level CAPS Designation**: CAPS server is designated at the Property level via `capsWorkstationId` column — a dropdown in the Property EMC form selects which workstation serves as the local check processing hub. The `activation-config` endpoint resolves the CAPS workstation's IP for all other workstations in the property. CAPS badge shown on workstation list.
+- **CAPS Auto-Discovery & Yellow Mode (v3.1)**: Electron main process calls `activation-config` on startup, discovers CAPS workstation, caches `serviceHostUrl`. When internet drops: CAPS workstation auto-starts embedded service-host on port 3001; other workstations proxy API calls to CAPS (Yellow mode) before falling to local SQLite (Red mode). Connection mode (green/yellow/red) is sent to renderer via IPC.
+- **Embedded Service-Host Bundle**: `service-host/src/` is compiled via esbuild into `electron/service-host-embedded.cjs` and bundled in the Electron app. CAPS workstation auto-starts it as a child process on port 3001 with auto-restart on crash.
 
 ## External Dependencies
 

@@ -6,6 +6,9 @@ class OfflineApiInterceptor {
     this.db = offlineDb;
     this.isOffline = false;
     this.config = {};
+    this.serviceHostUrl = null;
+    this.capsConfig = null;
+    this._connectionMode = 'green';
   }
 
   setOffline(offline) {
@@ -18,6 +21,31 @@ class OfflineApiInterceptor {
 
   setConfig(config) {
     this.config = config || {};
+  }
+
+  setServiceHostUrl(url) {
+    this.serviceHostUrl = url || null;
+    appLogger.info('Interceptor', `Service host URL set: ${url || 'none'}`);
+  }
+
+  setCapsConfig(capsConfig) {
+    this.capsConfig = capsConfig || null;
+  }
+
+  setConnectionMode(mode) {
+    const changed = this._connectionMode !== mode;
+    this._connectionMode = mode;
+    if (changed) {
+      appLogger.info('Interceptor', `Connection mode changed to: ${mode.toUpperCase()}`);
+    }
+  }
+
+  getConnectionMode() {
+    return this._connectionMode;
+  }
+
+  getServiceHostUrl() {
+    return this.serviceHostUrl;
   }
 
   canHandleOffline(method, pathname) {

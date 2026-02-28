@@ -34,7 +34,8 @@
     "node_modules/ms/**/*",
     "node_modules/sax/**/*",
     "node_modules/serialport/**/*",
-    "node_modules/@serialport/**/*"
+    "node_modules/@serialport/**/*",
+    "electron/service-host-embedded.cjs"
   ],
   "asarUnpack": [
     "node_modules/better-sqlite3/**/*",
@@ -86,7 +87,7 @@
   },
   "extraMetadata": {
     "main": "electron/main.cjs",
-    "version": "3.0.0"
+    "version": "3.1.0"
   },
   "buildDependenciesFromSource": false,
   "npmRebuild": true
