@@ -1,8 +1,8 @@
-# Cloud POS v3.1.0 — CAPS Offline Architecture
+# Cloud POS v3.1.1 — CAPS Offline Architecture (Hotfix)
 
 **Release Date:** February 2026  
 **Build Target:** Windows x64 (NSIS Installer)  
-**Previous Version:** v3.0.0
+**Previous Version:** v3.1.0
 
 ---
 
@@ -79,6 +79,14 @@ No new EMC configuration required. The existing CAPS workstation designation (Pr
 1. CAPS workstation is designated in EMC (Property form → CAPS Workstation dropdown)
 2. All workstations have correct LAN IPs configured
 3. Port 3001 is accessible on the CAPS workstation's LAN
+
+---
+
+## v3.1.1 Hotfix: Service-Host Shebang Fix
+
+- **Root Cause**: The esbuild-bundled `service-host-embedded.cjs` contained a `#!/usr/bin/env node` shebang line from the source entry point. When Electron's `fork()` loaded this file from inside the `.asar` archive, Node's module loader could not parse the shebang, causing `SyntaxError: Invalid or unexpected token` at line 14 and a crash loop with 5-second restarts.
+- **Fix**: Build script now strips all shebang lines from the bundle output before prepending the env bootstrap. Additionally, the service-host bundle is now added to `asarUnpack` so it's extracted outside the asar archive, ensuring `fork()` works reliably with native modules.
+- **Impact**: CAPS workstations can now start the embedded service-host process successfully, enabling Yellow mode for all workstations on the LAN when internet drops.
 
 ---
 

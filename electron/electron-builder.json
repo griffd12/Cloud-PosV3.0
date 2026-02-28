@@ -43,7 +43,8 @@
     "node_modules/file-uri-to-path/**/*",
     "node_modules/keytar/**/*",
     "node_modules/serialport/**/*",
-    "node_modules/@serialport/**/*"
+    "node_modules/@serialport/**/*",
+    "electron/service-host-embedded.cjs"
   ],
   "extraResources": [
     {
@@ -87,7 +88,7 @@
   },
   "extraMetadata": {
     "main": "electron/main.cjs",
-    "version": "3.1.0"
+    "version": "3.1.1"
   },
   "buildDependenciesFromSource": false,
   "npmRebuild": true

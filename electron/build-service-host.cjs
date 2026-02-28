@@ -42,6 +42,9 @@ try {
     console.log(`[build-service-host] Bundle created: ${outFile} (${sizeKB} KB)`);
 
     let content = fs.readFileSync(outFile, 'utf8');
+    // Strip shebang lines — they cause SyntaxError inside Electron's asar archive
+    content = content.replace(/^#!.*\r?\n/gm, '');
+    console.log('[build-service-host] Stripped shebang lines from bundle');
     const envBootstrap = `
 // Embedded service-host bootstrap: read config from environment variables
 if (process.env.SERVICE_HOST_PORT) {
