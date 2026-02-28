@@ -2385,10 +2385,26 @@ function registerProtocolInterceptor() {
       }
     }
 
+    if (!isOnline && !isApiRequest) {
+      const cached = getCachedResponseFromDisk(url.pathname);
+      if (cached) {
+        appLogger.debug('PageCache', `Serving cached (offline): ${url.pathname}`);
+        return cached;
+      }
+    }
+
     const failoverClone = isApiRequest ? request.clone() : null;
 
     try {
-      const response = await electronNet.fetch(request, { bypassCustomProtocolHandlers: true });
+      let fetchSignal;
+      if (typeof AbortSignal.timeout === 'function') {
+        fetchSignal = AbortSignal.timeout(8000);
+      } else {
+        const ac = new AbortController();
+        setTimeout(() => ac.abort(), 8000);
+        fetchSignal = ac.signal;
+      }
+      const response = await electronNet.fetch(request, { bypassCustomProtocolHandlers: true, signal: fetchSignal });
 
       if (response.ok && request.method === 'GET' && !isApiRequest) {
         const cloned = response.clone();
@@ -2522,7 +2538,22 @@ async function initAllServices() {
     setupAutoLaunch(true);
   }
 
-  syncInterval = setInterval(checkConnectivity, 30000);
+  let lastConnectivityMode = 'green';
+  function scheduleConnectivityCheck() {
+    if (syncInterval) clearInterval(syncInterval);
+    const interval = lastConnectivityMode === 'green' ? 30000 : 15000;
+    appLogger.info('Connectivity', `Check interval set to ${interval / 1000}s (mode: ${lastConnectivityMode})`);
+    syncInterval = setInterval(async () => {
+      await checkConnectivity();
+      const currentMode = connectionMode || 'green';
+      if (currentMode !== lastConnectivityMode) {
+        appLogger.info('Connectivity', `Mode changed ${lastConnectivityMode} -> ${currentMode}, adjusting interval`);
+        lastConnectivityMode = currentMode;
+        scheduleConnectivityCheck();
+      }
+    }, interval);
+  }
+  scheduleConnectivityCheck();
   checkConnectivity();
 
   syncTimer = setInterval(syncOfflineData, 60000);
