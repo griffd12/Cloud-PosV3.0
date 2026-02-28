@@ -52,6 +52,7 @@ Preferred communication style: Simple, everyday language.
 - **Config-Driven Tax & Tender**: `recalculateTotals()` uses per-item `tax_group_id` for flexible tax calculations; `addPayment()` enforces tender behavior flags.
 - **Offline Reporting**: `GET /api/caps/reports/daily-summary` returns key metrics from local SQLite.
 - **Proof Mode**: Automated 8-phase verification for schema init, config seeding, offline POS/KDS operations, tender/close, journal integrity, persistence, and idempotency.
+- **Property-Level CAPS Designation**: CAPS server is designated at the Property level via `capsWorkstationId` column — a dropdown in the Property EMC form selects which workstation serves as the local check processing hub. The `activation-config` endpoint resolves the CAPS workstation's IP for all other workstations in the property. CAPS badge shown on workstation list.
 
 ## External Dependencies
 

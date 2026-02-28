@@ -432,6 +432,11 @@ const configHelpRegistry: Record<string, ConfigHelpEntry> = {
     description: "When enabled, the role can bypass all configured time windows (reopen window, edit closed window, refund window). Operations that would normally be blocked after the time window expires are allowed regardless of timing.",
     category: "admin_flags",
   },
+  capsWorkstationId: {
+    label: "CAPS Workstation",
+    description: "Designates which workstation serves as the CAPS (Check & Posting Service) server for this property. The CAPS server is the local hub that all POS and KDS stations connect to on the LAN for check processing. It stores all transaction data locally and syncs to the cloud. Only one workstation per property can be the CAPS server.",
+    category: "Property",
+  },
 };
 
 export function getConfigHelp(fieldName: string): ConfigHelpEntry | undefined {

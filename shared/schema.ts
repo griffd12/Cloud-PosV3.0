@@ -29,6 +29,7 @@ export const properties = pgTable("properties", {
   signInLogoUrl: text("sign_in_logo_url"),
   // Auto clock-out settings - automatically clock out employees when business date changes
   autoClockOutEnabled: boolean("auto_clock_out_enabled").default(false),
+  capsWorkstationId: varchar("caps_workstation_id"),
   active: boolean("active").default(true),
 });
 

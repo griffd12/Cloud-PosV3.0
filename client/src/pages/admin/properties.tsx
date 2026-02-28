@@ -3,10 +3,11 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePosWebSocket } from "@/hooks/use-pos-websocket";
 import { DataTable, type Column } from "@/components/admin/data-table";
 import { EntityForm, type FormFieldConfig } from "@/components/admin/entity-form";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest, getAuthHeaders } from "@/lib/queryClient";
 import { useEmcFilter } from "@/lib/emc-context";
-import { insertPropertySchema, type Property, type InsertProperty, type Enterprise } from "@shared/schema";
+import { insertPropertySchema, type Property, type InsertProperty, type Enterprise, type Workstation } from "@shared/schema";
 
 export default function PropertiesPage() {
   const { toast } = useToast();
@@ -31,6 +32,16 @@ export default function PropertiesPage() {
 
   const { data: enterprises = [] } = useQuery<Enterprise[]>({
     queryKey: ["/api/enterprises"],
+  });
+
+  const { data: allWorkstations = [] } = useQuery<Workstation[]>({
+    queryKey: ["/api/workstations", selectedEnterpriseId],
+    queryFn: async () => {
+      const param = selectedEnterpriseId ? `?enterpriseId=${selectedEnterpriseId}` : "";
+      const res = await fetch(`/api/workstations${param}`, { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch workstations");
+      return res.json();
+    },
   });
 
   const timezoneOptions = [
@@ -75,6 +86,22 @@ export default function PropertiesPage() {
     return option?.label || time;
   };
 
+  const getCapsWsName = (capsWsId: string | null | undefined) => {
+    if (!capsWsId) return "None";
+    const ws = allWorkstations.find(w => w.id === capsWsId);
+    return ws ? ws.name : "Unknown";
+  };
+
+  const getWorkstationOptionsForProperty = (propertyId?: string) => {
+    const filtered = propertyId
+      ? allWorkstations.filter(w => w.propertyId === propertyId)
+      : allWorkstations;
+    return [
+      { value: "__none__", label: "None" },
+      ...filtered.map(w => ({ value: w.id, label: `${w.name}${w.ipAddress ? ` (${w.ipAddress})` : ""}` })),
+    ];
+  };
+
   const columns: Column<Property>[] = [
     { key: "name", header: "Name", sortable: true },
     { key: "code", header: "Code", sortable: true },
@@ -97,6 +124,13 @@ export default function PropertiesPage() {
       key: "businessDateMode", 
       header: "Rollover Mode",
       render: (value) => getRolloverModeLabel(value as string),
+    },
+    {
+      key: "capsWorkstationId",
+      header: "CAPS Server",
+      render: (value) => value ? (
+        <Badge data-testid={`badge-caps-${value}`} variant="secondary">{getCapsWsName(value as string)}</Badge>
+      ) : "-",
     },
   ];
 
@@ -137,6 +171,13 @@ export default function PropertiesPage() {
       label: "Auto Clock-Out at Rollover",
       type: "switch",
       description: "Automatically clock out all employees when the business date changes",
+    },
+    {
+      name: "capsWorkstationId",
+      label: "CAPS Workstation",
+      type: "select",
+      options: getWorkstationOptionsForProperty(editingItem?.id),
+      description: "Select the workstation that will serve as the CAPS server for this property. All POS and KDS stations connect to this workstation on the local network for check processing.",
     },
   ];
 
@@ -185,10 +226,14 @@ export default function PropertiesPage() {
   });
 
   const handleSubmit = (data: InsertProperty) => {
+    const cleaned = {
+      ...data,
+      capsWorkstationId: data.capsWorkstationId === "__none__" ? null : data.capsWorkstationId || null,
+    };
     if (editingItem) {
-      updateMutation.mutate({ ...editingItem, ...data });
+      updateMutation.mutate({ ...editingItem, ...cleaned });
     } else {
-      createMutation.mutate({ ...data, ...scopePayload });
+      createMutation.mutate({ ...cleaned, ...scopePayload });
     }
   };
 

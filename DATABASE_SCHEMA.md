@@ -71,10 +71,12 @@ Individual restaurant locations belonging to an enterprise.
 | current_business_date | text | YES | — |
 | sign_in_logo_url | text | YES | — |
 | auto_clock_out_enabled | boolean | YES | `false` |
+| caps_workstation_id | varchar | YES | — |
 
 - **Primary Key:** `id`
 - **Foreign Keys:**
   - `enterprise_id` → `enterprises.id`
+  - `caps_workstation_id` → `workstations.id` (designates which workstation is the CAPS server for this property)
 
 ---
 

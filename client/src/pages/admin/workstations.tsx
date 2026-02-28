@@ -62,8 +62,28 @@ export default function WorkstationsPage() {
     },
   });
 
+  const capsWorkstationIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const prop of properties) {
+      if (prop.capsWorkstationId) ids.add(prop.capsWorkstationId);
+    }
+    return ids;
+  }, [properties]);
+
   const columns: Column<Workstation>[] = useMemo(() => [
-    { key: "name", header: "Name", sortable: true },
+    {
+      key: "name",
+      header: "Name",
+      sortable: true,
+      render: (value: any, row: Workstation) => (
+        <span className="flex items-center gap-2">
+          {value}
+          {capsWorkstationIds.has(row.id) && (
+            <Badge data-testid={`badge-caps-ws-${row.id}`} className="bg-blue-600 text-white text-[10px] px-1.5 py-0">CAPS</Badge>
+          )}
+        </span>
+      ),
+    },
     {
       key: "deviceType",
       header: "Type",
@@ -107,7 +127,7 @@ export default function WorkstationsPage() {
     getScopeColumn(),
     getZoneColumn<Workstation>(scopeLookup),
     getInheritanceColumn<Workstation>(contextPropertyId, selectedRvcId),
-  ], [properties, rvcs, printers, scopeLookup, contextPropertyId, selectedRvcId]);
+  ], [properties, rvcs, printers, capsWorkstationIds, scopeLookup, contextPropertyId, selectedRvcId]);
 
   const printerOptions = useMemo(() => {
     const getPropertyName = (propertyId: string) => {

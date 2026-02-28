@@ -1944,6 +1944,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ message: "currentBusinessDate is required when businessDateMode is 'manual'" });
       }
     }
+    if (req.body.capsWorkstationId) {
+      const capsWs = await storage.getWorkstation(req.body.capsWorkstationId);
+      if (!capsWs) {
+        return res.status(400).json({ message: "CAPS workstation not found" });
+      }
+      if (capsWs.propertyId !== req.params.id) {
+        return res.status(400).json({ message: "CAPS workstation must belong to this property" });
+      }
+    }
     const data = await storage.updateProperty(req.params.id, req.body);
     if (!data) return res.status(404).json({ message: "Not found" });
     res.json(data);
@@ -3566,6 +3575,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       
       const serviceHosts = await storage.getServiceHosts(workstation.propertyId);
       const primaryServiceHost = serviceHosts.find(sh => sh.isPrimary) || serviceHosts[0] || null;
+
+      let capsWorkstation: any = null;
+      let capsServiceHostUrl: string | null = null;
+      if (property.capsWorkstationId) {
+        capsWorkstation = await storage.getWorkstation(property.capsWorkstationId);
+        if (capsWorkstation) {
+          capsServiceHostUrl = `http://${capsWorkstation.ipAddress || "localhost"}:3001`;
+        }
+      }
       
       const pendingDeployments = await storage.getCalDeployments(property.enterpriseId);
       const workstationDeploymentTargets: any[] = [];
@@ -3588,6 +3606,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       }
 
+      const resolvedServiceHostUrl = capsServiceHostUrl
+        || (primaryServiceHost ? `http://${primaryServiceHost.lastKnownIp || "localhost"}:3001` : null);
+
       res.json({
         workstation,
         property,
@@ -3598,7 +3619,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         pendingDeployments: workstationDeploymentTargets,
         connectionConfig: {
           cloudUrl: process.env.REPLIT_URL || "",
-          serviceHostUrl: primaryServiceHost ? `http://${primaryServiceHost.lastKnownIp || "localhost"}:3001` : null,
+          serviceHostUrl: resolvedServiceHostUrl,
+          capsWorkstationId: property.capsWorkstationId || null,
+          capsWorkstationName: capsWorkstation?.name || null,
           syncEnabled: workstation.allowOfflineOperation,
         },
       });
