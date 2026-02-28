@@ -2025,60 +2025,6 @@ export default function PosPage() {
                 isLoading={itemsLoading && !!selectedSlu}
               />
 
-              {currentRvc?.conversationalOrderingEnabled && conversationalOrderItem && (
-                <HorizontalCOMPanel
-                  enterpriseId={wsContext?.property?.enterpriseId || ""}
-                  activeMenuItem={conversationalOrderItem}
-                  editingCheckItem={editingCOMCheckItem}
-                  onConfirmItem={async (menuItemId, modifications) => {
-                    if (!currentCheck) {
-                      toast({ title: "No check open", description: "Start a new check first", variant: "destructive" });
-                      return;
-                    }
-                    try {
-                      const comModifiers: (SelectedModifier & { prefix?: string })[] = modifications.map(m => ({
-                        id: m.ingredientName,
-                        name: m.prefixName ? `${m.prefixName} ${m.ingredientName}` : m.ingredientName,
-                        priceDelta: "0.00",
-                        prefix: m.prefixName || undefined,
-                      }));
-                      
-                      // Merge standard modifiers (e.g. Meat Temp) with COM ingredient modifiers
-                      const allModifiers = [...pendingStandardModifiers, ...comModifiers];
-                      
-                      if (editingCOMCheckItem) {
-                        const res = await fetchWithTimeout(`/api/check-items/${editingCOMCheckItem.id}/modifiers`, {
-                          method: "PUT",
-                          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-                          body: JSON.stringify({ modifiers: allModifiers }),
-                        });
-                        if (!res.ok) throw new Error("Failed to update item");
-                        const updatedItem = await res.json();
-                        setCheckItems(prev => prev.map(i => i.id === updatedItem.id ? updatedItem : i));
-                        toast({ title: "Item updated" });
-                      } else {
-                        await addItemMutation.mutateAsync({
-                          menuItem: conversationalOrderItem!,
-                          modifiers: allModifiers,
-                        });
-                        toast({ title: "Item added to order" });
-                      }
-                      
-                      setConversationalOrderItem(null);
-                      setEditingCOMCheckItem(null);
-                      setPendingStandardModifiers([]);
-                    } catch (error: any) {
-                      toast({ title: "Failed to save item", description: error.message, variant: "destructive" });
-                    }
-                  }}
-                  onCancelItem={() => {
-                    setConversationalOrderItem(null);
-                    setEditingCOMCheckItem(null);
-                    setPendingStandardModifiers([]);
-                  }}
-                />
-              )}
-
               <div className="flex-shrink-0 border-t bg-card p-2">
                 <div className="flex gap-2 flex-wrap">
                   <div className="h-14 flex-1 min-w-[100px]">
@@ -2186,6 +2132,56 @@ export default function PosPage() {
                 </div>
               </div>
             </>
+          )}
+
+          {currentRvc?.conversationalOrderingEnabled && conversationalOrderItem && (
+            <HorizontalCOMPanel
+              enterpriseId={wsContext?.property?.enterpriseId || ""}
+              activeMenuItem={conversationalOrderItem}
+              editingCheckItem={editingCOMCheckItem}
+              onConfirmItem={async (menuItemId, modifications) => {
+                if (!currentCheck) {
+                  toast({ title: "No check open", description: "Start a new check first", variant: "destructive" });
+                  return;
+                }
+                try {
+                  const comModifiers: (SelectedModifier & { prefix?: string })[] = modifications.map(m => ({
+                    id: m.ingredientName,
+                    name: m.prefixName ? `${m.prefixName} ${m.ingredientName}` : m.ingredientName,
+                    priceDelta: "0.00",
+                    prefix: m.prefixName || undefined,
+                  }));
+                  const allModifiers = [...pendingStandardModifiers, ...comModifiers];
+                  if (editingCOMCheckItem) {
+                    const res = await fetchWithTimeout(`/api/check-items/${editingCOMCheckItem.id}/modifiers`, {
+                      method: "PUT",
+                      headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+                      body: JSON.stringify({ modifiers: allModifiers }),
+                    });
+                    if (!res.ok) throw new Error("Failed to update item");
+                    const updatedItem = await res.json();
+                    setCheckItems(prev => prev.map(i => i.id === updatedItem.id ? updatedItem : i));
+                    toast({ title: "Item updated" });
+                  } else {
+                    await addItemMutation.mutateAsync({
+                      menuItem: conversationalOrderItem!,
+                      modifiers: allModifiers,
+                    });
+                    toast({ title: "Item added to order" });
+                  }
+                  setConversationalOrderItem(null);
+                  setEditingCOMCheckItem(null);
+                  setPendingStandardModifiers([]);
+                } catch (error: any) {
+                  toast({ title: "Failed to save item", description: error.message, variant: "destructive" });
+                }
+              }}
+              onCancelItem={() => {
+                setConversationalOrderItem(null);
+                setEditingCOMCheckItem(null);
+                setPendingStandardModifiers([]);
+              }}
+            />
           )}
         </div>
 

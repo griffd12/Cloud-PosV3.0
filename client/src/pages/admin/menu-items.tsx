@@ -31,7 +31,7 @@ import { queryClient, apiRequest, getAuthHeaders } from "@/lib/queryClient";
 import { useEmcFilter } from "@/lib/emc-context";
 import { getScopeColumn, getZoneColumn, getInheritanceColumn } from "@/components/admin/scope-column";
 import { useScopeLookup } from "@/hooks/use-scope-lookup";
-import { insertMenuItemSchema, type MenuItem, type InsertMenuItem, type TaxGroup, type PrintClass, type Slu, type MenuItemSlu, type ModifierGroup, type MenuItemModifierGroup, type MajorGroup, type FamilyGroup, type IngredientPrefix, type MenuItemRecipeIngredient, type Modifier } from "@shared/schema";
+import { insertMenuItemSchema, type MenuItem, type InsertMenuItem, type TaxGroup, type PrintClass, type Slu, type MenuItemSlu, type ModifierGroup, type MenuItemModifierGroup, type MajorGroup, type FamilyGroup, type IngredientPrefix, type MenuItemRecipeIngredient, type Modifier, type ModifierGroupModifier } from "@shared/schema";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Download, Upload, Unlink, Plus, X } from "lucide-react";
@@ -441,6 +441,15 @@ export default function MenuItemsPage() {
     queryKey: ["/api/modifiers", filterKeys],
     queryFn: async () => {
       const res = await fetch(`/api/modifiers${filterParam}`, { headers: getAuthHeaders() });
+      return res.json();
+    },
+    enabled: !!selectedEnterpriseId && menuBuildEnabled,
+  });
+
+  const { data: modGroupModLinks = [] } = useQuery<ModifierGroupModifier[]>({
+    queryKey: ["/api/sync/modifier-group-modifiers"],
+    queryFn: async () => {
+      const res = await fetch(`/api/sync/modifier-group-modifiers`, { headers: getAuthHeaders() });
       return res.json();
     },
     enabled: !!selectedEnterpriseId && menuBuildEnabled,
@@ -954,80 +963,130 @@ export default function MenuItemsPage() {
                   {menuBuildEnabled && (
                     <>
                       <div className="mb-3">
-                        <Label className="text-sm mb-2 block">Add Ingredient from Modifiers</Label>
-                        <Select
-                          value=""
-                          onValueChange={(value) => {
-                            if (value) addRecipeIngredient(value);
-                          }}
-                        >
-                          <SelectTrigger data-testid="select-add-ingredient">
-                            <SelectValue placeholder="Select modifier to add as ingredient..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {modifiers
-                              .filter(m => !recipeIngredients.find(r => r.modifierId === m.id))
-                              .map(mod => (
-                                <SelectItem key={mod.id} value={mod.id}>
-                                  {mod.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
+                        <Label className="text-sm mb-2 block">Select Ingredients from Modifiers</Label>
+                        {modifiers.length === 0 ? (
+                          <p className="text-sm text-muted-foreground italic">
+                            No modifiers configured. Create Modifiers in the Modifiers section first.
+                          </p>
+                        ) : (
+                          <ScrollArea className="h-[220px] border rounded-md p-3">
+                            <div className="space-y-3">
+                              {(() => {
+                                const grouped: Record<string, { groupName: string; mods: Modifier[] }> = {};
+                                const assignedModIds = new Set<string>();
+                                modGroupModLinks.forEach(link => {
+                                  const group = modifierGroups.find(g => g.id === link.modifierGroupId);
+                                  const mod = modifiers.find(m => m.id === link.modifierId);
+                                  if (!group || !mod) return;
+                                  if (!grouped[group.id]) grouped[group.id] = { groupName: group.name, mods: [] };
+                                  if (!grouped[group.id].mods.find(m => m.id === mod.id)) {
+                                    grouped[group.id].mods.push(mod);
+                                    assignedModIds.add(mod.id);
+                                  }
+                                });
+                                const ungrouped = modifiers.filter(m => !assignedModIds.has(m.id));
+                                const sections = Object.entries(grouped).sort((a, b) => a[1].groupName.localeCompare(b[1].groupName));
+                                return (
+                                  <>
+                                    {sections.map(([groupId, { groupName, mods }]) => (
+                                      <div key={groupId}>
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{groupName}</p>
+                                        <div className="space-y-1">
+                                          {mods.sort((a, b) => a.name.localeCompare(b.name)).map(mod => (
+                                            <div key={mod.id} className="flex items-center gap-3 p-1.5 rounded-md hover:bg-muted/50">
+                                              <Checkbox
+                                                id={`recipe-mod-${mod.id}`}
+                                                checked={!!recipeIngredients.find(r => r.modifierId === mod.id)}
+                                                onCheckedChange={(checked) => {
+                                                  if (checked) addRecipeIngredient(mod.id);
+                                                  else removeRecipeIngredient(mod.id);
+                                                }}
+                                                data-testid={`checkbox-recipe-mod-${mod.id}`}
+                                              />
+                                              <Label htmlFor={`recipe-mod-${mod.id}`} className="flex-1 cursor-pointer text-sm">
+                                                {mod.name}
+                                              </Label>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ))}
+                                    {ungrouped.length > 0 && (
+                                      <div>
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Other</p>
+                                        <div className="space-y-1">
+                                          {ungrouped.sort((a, b) => a.name.localeCompare(b.name)).map(mod => (
+                                            <div key={mod.id} className="flex items-center gap-3 p-1.5 rounded-md hover:bg-muted/50">
+                                              <Checkbox
+                                                id={`recipe-mod-${mod.id}`}
+                                                checked={!!recipeIngredients.find(r => r.modifierId === mod.id)}
+                                                onCheckedChange={(checked) => {
+                                                  if (checked) addRecipeIngredient(mod.id);
+                                                  else removeRecipeIngredient(mod.id);
+                                                }}
+                                                data-testid={`checkbox-recipe-mod-${mod.id}`}
+                                              />
+                                              <Label htmlFor={`recipe-mod-${mod.id}`} className="flex-1 cursor-pointer text-sm">
+                                                {mod.name}
+                                              </Label>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </ScrollArea>
+                        )}
                       </div>
 
-                      {recipeIngredients.length === 0 ? (
-                        <p className="text-sm text-muted-foreground italic">
-                          No default ingredients configured. Add modifiers as default ingredients for this item.
-                        </p>
-                      ) : (
-                        <ScrollArea className="h-[180px] border rounded-md p-3">
-                          <div className="space-y-2">
-                            {recipeIngredients.map((ingredient, idx) => {
-                              const mod = modifiers.find(m => m.id === ingredient.modifierId);
-                              return (
-                                <div
-                                  key={ingredient.modifierId}
-                                  className="flex items-center gap-2 p-2 rounded-md bg-muted/50"
-                                >
-                                  <span className="text-muted-foreground text-sm w-6">{idx + 1}.</span>
-                                  <span className="flex-1">{mod?.name || "Unknown"}</span>
-                                  <Select
-                                    value={ingredient.defaultPrefixId || "__default__"}
-                                    onValueChange={(val) => updateIngredientPrefix(ingredient.modifierId, val === "__default__" ? null : val)}
-                                  >
-                                    <SelectTrigger className="w-28" data-testid={`select-prefix-${ingredient.modifierId}`}>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="__default__">Default</SelectItem>
-                                      {ingredientPrefixes.map(prefix => (
-                                        <SelectItem key={prefix.id} value={prefix.id}>
-                                          {prefix.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  <Button
-                                    type="button"
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => removeRecipeIngredient(ingredient.modifierId)}
-                                    data-testid={`button-remove-ingredient-${ingredient.modifierId}`}
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </ScrollArea>
-                      )}
-
                       {recipeIngredients.length > 0 && (
-                        <p className="text-sm text-muted-foreground mt-2">
-                          {recipeIngredients.length} default ingredient{recipeIngredients.length > 1 ? "s" : ""} configured
-                        </p>
+                        <>
+                          <Label className="text-sm mb-2 block">{recipeIngredients.length} Selected Ingredient{recipeIngredients.length > 1 ? "s" : ""} — Prefix Settings</Label>
+                          <ScrollArea className="h-[150px] border rounded-md p-3">
+                            <div className="space-y-2">
+                              {recipeIngredients.map((ingredient, idx) => {
+                                const mod = modifiers.find(m => m.id === ingredient.modifierId);
+                                return (
+                                  <div
+                                    key={ingredient.modifierId}
+                                    className="flex items-center gap-2 p-2 rounded-md bg-muted/50"
+                                  >
+                                    <span className="text-muted-foreground text-sm w-6">{idx + 1}.</span>
+                                    <span className="flex-1">{mod?.name || "Unknown"}</span>
+                                    <Select
+                                      value={ingredient.defaultPrefixId || "__default__"}
+                                      onValueChange={(val) => updateIngredientPrefix(ingredient.modifierId, val === "__default__" ? null : val)}
+                                    >
+                                      <SelectTrigger className="w-28" data-testid={`select-prefix-${ingredient.modifierId}`}>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="__default__">Default</SelectItem>
+                                        {ingredientPrefixes.map(prefix => (
+                                          <SelectItem key={prefix.id} value={prefix.id}>
+                                            {prefix.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <Button
+                                      type="button"
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={() => removeRecipeIngredient(ingredient.modifierId)}
+                                      data-testid={`button-remove-ingredient-${ingredient.modifierId}`}
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </ScrollArea>
+                        </>
                       )}
                     </>
                   )}
