@@ -15,13 +15,15 @@ import { PrintController } from '../services/print-controller.js';
 import { KdsController } from '../services/kds-controller.js';
 import { PaymentController } from '../services/payment-controller.js';
 import { ConfigSync } from '../sync/config-sync.js';
+import { Database } from '../db/database.js';
 
 export function createApiRoutes(
   caps: CapsService,
   print: PrintController,
   kds: KdsController,
   payment: PaymentController,
-  config: ConfigSync
+  config: ConfigSync,
+  db?: Database
 ): Router {
   const router = Router();
   
@@ -927,11 +929,23 @@ export function createApiRoutes(
     }
   });
   
-  // Stop auto-sync
   router.post('/sync/auto/stop', (req, res) => {
     try {
       config.stopAutoSync();
       res.json({ success: true, message: 'Auto-sync stopped' });
+    } catch (e) {
+      res.status(500).json({ error: (e as Error).message });
+    }
+  });
+  
+  router.get('/caps/reports/daily-summary', (req, res) => {
+    try {
+      if (!db) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+      const businessDate = (req.query.businessDate as string) || new Date().toISOString().split('T')[0];
+      const summary = db.getOfflineDailySummary(businessDate);
+      res.json(summary);
     } catch (e) {
       res.status(500).json({ error: (e as Error).message });
     }

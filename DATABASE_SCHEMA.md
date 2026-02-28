@@ -4185,10 +4185,36 @@ Dedicated boolean columns on the `tenders` table that drive all reporting and ca
 
 ## Service Host (CAPS) SQLite Parity
 
-The service-host SQLite schema (`service-host/src/db/schema.ts`, SCHEMA_VERSION=4) mirrors the cloud Postgres schema for offline operations:
+The service-host SQLite schema (`service-host/src/db/schema.ts`, SCHEMA_VERSION=5) mirrors the cloud Postgres schema for offline operations:
 
 **Tenders**: Includes all behavior flags (`is_system`, `pop_drawer`, `allow_tips`, `allow_over_tender`, `print_check_on_payment`, `require_manager_approval`, `requires_payment_processor`, `display_order`) and media classification flags (`is_cash_media`, `is_card_media`, `is_gift_media`). Migration v3→v4 uses ALTER TABLE ADD COLUMN with try/catch for idempotency and backfills from `type` column.
 
 **RVCs**: Includes printing flags (`receipt_print_mode`, `receipt_copies`, `kitchen_print_mode`, `void_receipt_print`, `require_guest_count`).
 
 **EMC Option Flags**: `emc_option_flags` table with unique index on `(enterprise_id, entity_type, entity_id, option_key, scope_level, scope_id)`. Synced from cloud during config sync. Scope resolution follows workstation → RVC → property → enterprise precedence.
+
+**Checks**: `txn_group_id` (TEXT) — UUID assigned at check creation, shared by all journal entries for the check lifecycle. `business_date` (TEXT) — date string. `discount_total`, `service_charge_total`, `amount_due` (INTEGER) — computed during `recalculateTotals()`.
+
+**Transaction Journal** (v5): Immutable append-only audit trail for all financial and KDS mutations.
+```
+transaction_journal (
+  event_id TEXT PRIMARY KEY,           -- UUID per event
+  txn_group_id TEXT NOT NULL,          -- UUID per check lifecycle
+  device_id TEXT NOT NULL,             -- workstation or 'kds'
+  rvc_id TEXT NOT NULL,
+  business_date TEXT NOT NULL,
+  check_id TEXT NOT NULL,
+  event_type TEXT NOT NULL,            -- check_opened, item_added, item_voided, round_sent,
+                                       -- discount_applied, payment_added, check_closed, check_voided,
+                                       -- kds_ticket_created, kds_ticket_completed, kds_item_recalled
+  payload_json TEXT NOT NULL,          -- event-specific JSON data
+  config_version TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  sync_state TEXT NOT NULL DEFAULT 'pending',  -- pending → synced
+  sync_attempts INTEGER NOT NULL DEFAULT 0,
+  synced_at TEXT
+)
+```
+Indexes: `idx_journal_sync_state`, `idx_journal_check`, `idx_journal_business_date`, `idx_journal_txn_group`, `idx_journal_device`.
+
+**Cloud Idempotency**: `POST /api/sync/transactions` checks `service_host_transactions(local_id, service_host_id)` before inserting. Duplicates returned in `skipped` array.

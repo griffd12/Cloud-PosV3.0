@@ -1,0 +1,37 @@
+PILOT HARDENING (HYBRID OFFLINE + OPTION-DRIVEN) — DO THIS IN ONE DEPENDENCY CHAIN, NO EXTRA FEATURES.
+
+Objective: By mid/late March, Electron POS must run fully offline using service-host SQLite as the source of truth, then sync back to cloud with an immutable audit trail and exactly-once semantics. All money-impacting behavior must be configuration/option-driven (no hardcoded rules).
+
+MANDATORY DELIVERABLES (in this order):
+
+0) CONFIG-DRIVEN ENFORCEMENT BASELINE (service-host CAPS)
+   - Create a single EffectiveConfig access layer in service-host that reads local emc_option_flags + synced entity tables.
+   - Remove any hardcoded financial rules in CAPS starting with recalculateTotals(): tax MUST come from synced tax groups (and tender rules from tender flags/option bits). No hardcoded 8%.
+   - Ensure tender lifecycle decisions (tips/over-tender/drawer pop/manager approval/print-on-payment) are driven by config/option bits.
+
+1) IMMUTABLE TRANSACTION JOURNAL (service-host SQLite)
+   - Add transaction_journal table (append-only) with: journal_id UUID, device_id, rvc_id, business_date, check_id, event_type, payload_json, created_at, sync_state, sync_attempts,
+     PLUS config_version (or config_snapshot_hash) + effective_scope identifiers.
+   - All financial state changes must write a journal row (create check, add item, discount, service charge, payments, close, void/refund, reopen).
+
+2) EXACTLY-ONCE SYNC (service-host → cloud)
+   - Sync uses an outbox; journal rows are never deleted.
+   - Add journal_id to sync payload and enforce idempotency on cloud /api/sync/transactions using journal_id (or localId) so retries never create duplicates.
+   - Cloud must persist received journals (service_host_transactions or new table) with unique constraint on journal_id.
+
+3) OFFLINE REPORTING (from local SQLite)
+   - Implement a basic offline dashboard computed locally: net sales, tax, discounts, payments by tender, open checks, closed checks for current business_date.
+   - Must work while offline and after app restart offline.
+
+4) PROOF MODE (non-negotiable)
+   - Add a Proof Mode script/button that:
+     A) Syncs config/menu/users while online and prints local row counts.
+     B) Forces offline, logs in, runs scenario: open check → add items → discount → tender cash + card(simulated) → close check.
+     C) Restarts Electron while still offline and proves closed check + offline totals still present.
+     D) Restores online, syncs journals, then prints cloud verification queries showing: journal count match, no duplicate checks, totals match, idempotency confirmed by re-sending same payload.
+   - Output must be copy/pastable “proof logs” for an auditor.
+
+Constraints:
+- Do NOT add unrelated features or UI polish.
+- Prioritize correctness, auditability, and option-driven behavior.
+- If any dependency is missing, implement the minimum required to satisfy the deliverables above.

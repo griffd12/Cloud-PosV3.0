@@ -189,7 +189,8 @@ class ServiceHost {
       this.printController,
       this.kdsController,
       this.paymentController,
-      this.configSync
+      this.configSync,
+      this.db
     );
     this.app.use('/api', authMiddleware, propertyScopeMiddleware, apiRouter);
     

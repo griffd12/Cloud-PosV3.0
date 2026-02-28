@@ -1,0 +1,34 @@
+PILOT OFFLINE HARDENING UPDATE — KDS IS REQUIRED.
+
+Keep the existing plan (EffectiveConfig in service-host, remove hardcoded rules, immutable transaction_journal, exactly-once sync with idempotency, offline reporting, proof mode). BUT expand it to include full OFFLINE KDS functionality because the pilot location uses KDS.
+
+Required changes:
+
+A) KDS must operate offline against local data:
+- When POS is offline, sendToKitchen must write KDS tickets locally (SQLite) and KDS UI must read tickets locally (no cloud dependency).
+- KDS actions (bump/recall/complete) must update local state and be journaled for later sync.
+
+B) Journal must include KDS event types and grouping:
+- transaction_journal must include txn_group_id per check lifecycle and event_id per event.
+- Add KDS events: kds_ticket_created, kds_item_bumped, kds_ticket_completed, kds_item_recalled (as applicable).
+- Each KDS event references check_id + ticket_id + item_ids and includes config_version/scope context.
+
+C) Sync must include KDS events exactly-once:
+- /api/sync/transactions must accept and idempotently store KDS journal events too (unique on event_id per service_host).
+- Cloud must ACK processed/skipped event_ids; service-host marks synced only for ACKed ids.
+
+D) Offline reporting must include KDS operational metrics (minimal for pilot):
+- From local SQLite: open tickets, bumped items count, average ticket age (simple), plus the existing sales/tender totals.
+
+E) Proof Mode becomes an OFFLINE SCENARIO SUITE (must PASS all):
+1) Online sync config/menu/employees/tenders/tax groups/KDS routing config → print local counts.
+2) Go offline; login; open check; add items+modifiers; send to kitchen; verify KDS sees ticket offline.
+3) Bump items on KDS offline; verify POS shows kitchen status updates (or at least ticket/bump state).
+4) Tender cash + simulated card offline; close check; reopen closed check (if option allows); transfer/pickup check (if option allows); re-close.
+5) Restart Electron offline; confirm check history, KDS ticket history, and daily summary still present.
+6) Restore online; sync journals; call /api/sync/verify; verify no duplicates, totals match, and KDS events received; rerun sync with same events to prove idempotency.
+
+Constraints:
+- Gift/Loyalty can be excluded from offline scope.
+- Do NOT add unrelated features. Do NOT polish UI. Focus on correctness and proof output.
+- If KDS currently depends on cloud, refactor it to use service-host local SQLite during offline mode.

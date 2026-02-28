@@ -17,7 +17,9 @@ export class CapsService {
   private db: Database;
   private transactionSync: TransactionSync;
   private checkNumberSequence: number = 1;
-  private defaultLockDuration: number = 300; // 5 minutes
+  private defaultLockDuration: number = 300;
+  private deviceId: string = 'unknown';
+  private configVersion: string | null = null;
   
   constructor(db: Database, transactionSync: TransactionSync) {
     this.db = db;
@@ -30,6 +32,38 @@ export class CapsService {
     if (lastCheck?.check_number) {
       this.checkNumberSequence = lastCheck.check_number + 1;
     }
+  }
+  
+  setDeviceId(deviceId: string): void {
+    this.deviceId = deviceId;
+  }
+  
+  setConfigVersion(version: string): void {
+    this.configVersion = version;
+  }
+  
+  private writeJournal(checkId: string, txnGroupId: string, rvcId: string, eventType: string, payload: any): void {
+    const businessDate = this.getBusinessDate();
+    this.db.writeJournalEntry({
+      eventId: randomUUID(),
+      txnGroupId,
+      deviceId: this.deviceId,
+      rvcId,
+      businessDate,
+      checkId,
+      eventType,
+      payloadJson: JSON.stringify(payload),
+      configVersion: this.configVersion || undefined,
+    });
+  }
+  
+  private getBusinessDate(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+  
+  private getTxnGroupId(checkId: string): string {
+    const row = this.db.get<{ txn_group_id: string | null }>('SELECT txn_group_id FROM checks WHERE id = ?', [checkId]);
+    return row?.txn_group_id || checkId;
   }
   
   // ============================================================================
@@ -108,20 +142,29 @@ export class CapsService {
     this.db.setWorkstationConfig(workstationId, start, end);
   }
   
-  // Create a new check
   createCheck(params: CreateCheckParams): Check {
     const id = randomUUID();
+    const txnGroupId = randomUUID();
     const checkNumber = this.getNextCheckNumber(params.workstationId);
+    const businessDate = this.getBusinessDate();
     
     this.db.run(
-      `INSERT INTO checks (id, check_number, rvc_id, employee_id, order_type, table_number, guest_count, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'open')`,
-      [id, checkNumber, params.rvcId, params.employeeId, params.orderType || 'dine_in', params.tableNumber, params.guestCount || 1]
+      `INSERT INTO checks (id, txn_group_id, check_number, rvc_id, employee_id, order_type, table_number, guest_count, status, business_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', ?)`,
+      [id, txnGroupId, checkNumber, params.rvcId, params.employeeId, params.orderType || 'dine_in', params.tableNumber, params.guestCount || 1, businessDate]
     );
     
     const check = this.getCheck(id)!;
     
-    // Queue for cloud sync
+    this.writeJournal(id, txnGroupId, params.rvcId, 'check_opened', {
+      checkNumber,
+      employeeId: params.employeeId,
+      orderType: params.orderType || 'dine_in',
+      tableNumber: params.tableNumber,
+      guestCount: params.guestCount || 1,
+      workstationId: params.workstationId,
+    });
+    
     this.transactionSync.queueCheck(id, 'create', check);
     
     return check;
@@ -141,6 +184,7 @@ export class CapsService {
     
     return {
       id: row.id,
+      txnGroupId: row.txn_group_id || row.id,
       checkNumber: row.check_number,
       rvcId: row.rvc_id,
       employeeId: row.employee_id,
@@ -151,7 +195,11 @@ export class CapsService {
       subtotal: row.subtotal,
       tax: row.tax,
       total: row.total,
+      discountTotal: row.discount_total || 0,
+      serviceChargeTotal: row.service_charge_total || 0,
+      amountDue: row.amount_due || 0,
       currentRound: row.current_round,
+      businessDate: row.business_date || undefined,
       items,
       payments,
       createdAt: row.created_at,
@@ -196,8 +244,8 @@ export class CapsService {
       const unitPrice = item.priceOverride || menuItem.price;
       
       this.db.run(
-        `INSERT INTO check_items (id, check_id, round_number, menu_item_id, name, quantity, unit_price, modifiers, seat_number)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO check_items (id, check_id, round_number, menu_item_id, name, quantity, unit_price, tax_group_id, modifiers, seat_number)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           checkId,
@@ -206,12 +254,13 @@ export class CapsService {
           menuItem.name,
           item.quantity || 1,
           unitPrice,
+          menuItem.tax_group_id || null,
           JSON.stringify(item.modifiers || []),
           item.seatNumber,
         ]
       );
       
-      addedItems.push({
+      const checkItem: CheckItem = {
         id,
         checkId,
         roundNumber: check.currentRound,
@@ -223,37 +272,51 @@ export class CapsService {
         seatNumber: item.seatNumber,
         sentToKitchen: false,
         voided: false,
+      };
+      addedItems.push(checkItem);
+      
+      this.writeJournal(checkId, check.txnGroupId, check.rvcId, 'item_added', {
+        itemId: id,
+        menuItemId: item.menuItemId,
+        name: menuItem.name,
+        quantity: item.quantity || 1,
+        unitPrice,
+        taxGroupId: menuItem.tax_group_id || null,
+        modifiers: item.modifiers || [],
+        seatNumber: item.seatNumber,
+        roundNumber: check.currentRound,
       });
     }
     
-    // Recalculate totals
     this.recalculateTotals(checkId);
     
-    // Queue for sync
     const updatedCheck = this.getCheck(checkId)!;
     this.transactionSync.queueCheck(checkId, 'update', updatedCheck);
     
     return addedItems;
   }
   
-  // Send items to kitchen (fire current round)
   sendToKitchen(checkId: string, workstationId?: string): { roundNumber: number; itemsSent: number } {
     const check = this.getCheck(checkId);
     if (!check) throw new Error('Check not found');
     this.validateLock(checkId, workstationId);
     
-    // Mark unsent items as sent
     const result = this.db.run(
       `UPDATE check_items SET sent_to_kitchen = 1 WHERE check_id = ? AND sent_to_kitchen = 0 AND voided = 0`,
       [checkId]
     );
     
-    // Increment round number
     const newRound = check.currentRound + 1;
     this.db.run(
       'UPDATE checks SET current_round = ? WHERE id = ?',
       [newRound, checkId]
     );
+    
+    this.writeJournal(checkId, check.txnGroupId, check.rvcId, 'round_sent', {
+      roundNumber: check.currentRound,
+      itemsSent: result.changes,
+      workstationId,
+    });
     
     return {
       roundNumber: check.currentRound,
@@ -261,39 +324,69 @@ export class CapsService {
     };
   }
   
-  // Void an item
   voidItem(checkId: string, itemId: string, reason?: string, workstationId?: string): void {
     const check = this.getCheck(checkId);
     if (!check) throw new Error('Check not found');
     if (check.status !== 'open') throw new Error('Check is not open');
     this.validateLock(checkId, workstationId);
     
+    const item = check.items.find(i => i.id === itemId);
+    
     this.db.run(
       'UPDATE check_items SET voided = 1, void_reason = ? WHERE id = ? AND check_id = ?',
       [reason, itemId, checkId]
     );
     
+    this.writeJournal(checkId, check.txnGroupId, check.rvcId, 'item_voided', {
+      itemId,
+      menuItemId: item?.menuItemId,
+      name: item?.name,
+      quantity: item?.quantity,
+      unitPrice: item?.unitPrice,
+      amount: item ? item.quantity * item.unitPrice : 0,
+      reason,
+    });
+    
     this.recalculateTotals(checkId);
   }
   
-  // Add payment to check
-  addPayment(checkId: string, params: AddPaymentParams, workstationId?: string): Payment {
+  addPayment(checkId: string, params: AddPaymentParams, workstationId?: string): Payment & { popDrawer?: boolean; printCheck?: boolean } {
     const check = this.getCheck(checkId);
     if (!check) throw new Error('Check not found');
     if (check.status !== 'open') throw new Error('Check is not open');
     this.validateLock(checkId, workstationId);
     
-    const id = randomUUID();
-    
     const tender = this.db.getTender(params.tenderId);
     
+    if (tender) {
+      if (!tender.allow_tips && (params.tip || 0) > 0) {
+        throw new Error('Tips not allowed for this tender type');
+      }
+      
+      if (!tender.allow_over_tender && params.amount > check.total) {
+        throw new Error('Over-tendering not allowed for this tender type');
+      }
+      
+      if (tender.require_manager_approval && !params.managerPin) {
+        throw new Error('Manager approval required for this tender type');
+      }
+    }
+    
+    const id = randomUUID();
+    
+    let changeAmount = 0;
+    const amountDue = check.amountDue || check.total;
+    if (tender?.is_cash_media === 1 && tender?.allow_over_tender && params.amount > amountDue) {
+      changeAmount = params.amount - amountDue;
+    }
+    
     this.db.run(
-      `INSERT INTO payments (id, check_id, tender_id, tender_type, amount, tip, reference, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'authorized')`,
-      [id, checkId, params.tenderId, params.tenderType, params.amount, params.tip || 0, params.reference]
+      `INSERT INTO check_payments (id, check_id, tender_id, tender_type, amount, tip_amount, change_amount, reference_number, status, business_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'authorized', ?)`,
+      [id, checkId, params.tenderId, params.tenderType, params.amount, params.tip || 0, changeAmount, params.reference, check.businessDate || null]
     );
     
-    const payment: Payment = {
+    const payment: Payment & { popDrawer?: boolean; printCheck?: boolean; changeAmount?: number } = {
       id,
       checkId,
       tenderId: params.tenderId,
@@ -305,12 +398,28 @@ export class CapsService {
       tip: params.tip || 0,
       reference: params.reference,
       status: 'authorized',
+      popDrawer: tender?.pop_drawer === 1,
+      printCheck: tender?.print_check_on_payment === 1,
+      changeAmount,
     };
     
-    // Queue payment for sync
+    this.writeJournal(checkId, check.txnGroupId, check.rvcId, 'payment_added', {
+      paymentId: id,
+      tenderId: params.tenderId,
+      tenderType: params.tenderType,
+      amount: params.amount,
+      tip: params.tip || 0,
+      reference: params.reference,
+      isCashMedia: payment.isCashMedia,
+      isCardMedia: payment.isCardMedia,
+      isGiftMedia: payment.isGiftMedia,
+      popDrawer: payment.popDrawer,
+    });
+    
     this.transactionSync.queuePayment(id, payment);
     
-    // Check if fully paid
+    this.recalculateTotals(checkId);
+    
     const totalPayments = this.getTotalPayments(checkId);
     if (totalPayments >= check.total) {
       this.closeCheck(checkId);
@@ -319,7 +428,6 @@ export class CapsService {
     return payment;
   }
   
-  // Close check
   closeCheck(checkId: string, workstationId?: string): void {
     this.validateLock(checkId, workstationId);
     this.db.run(
@@ -328,21 +436,40 @@ export class CapsService {
     );
     
     const check = this.getCheck(checkId)!;
+    
+    this.writeJournal(checkId, check.txnGroupId, check.rvcId, 'check_closed', {
+      checkNumber: check.checkNumber,
+      subtotal: check.subtotal,
+      tax: check.tax,
+      discountTotal: check.discountTotal,
+      serviceChargeTotal: check.serviceChargeTotal,
+      total: check.total,
+      itemCount: check.items.length,
+      paymentCount: check.payments.length,
+      items: check.items.map(i => ({ id: i.id, name: i.name, qty: i.quantity, price: i.unitPrice, voided: i.voided })),
+      payments: check.payments.map(p => ({ id: p.id, type: p.tenderType, amount: p.amount, tip: p.tip })),
+    });
+    
     this.transactionSync.queueCheck(checkId, 'update', check);
   }
   
-  // Void entire check
   voidCheck(checkId: string, reason?: string, workstationId?: string): void {
     const check = this.getCheck(checkId);
     if (!check) throw new Error('Check not found');
     this.validateLock(checkId, workstationId);
+    
+    this.writeJournal(checkId, check.txnGroupId, check.rvcId, 'check_voided', {
+      checkNumber: check.checkNumber,
+      reason,
+      originalTotal: check.total,
+      itemCount: check.items.length,
+    });
     
     this.db.run(
       `UPDATE checks SET status = 'voided', closed_at = datetime('now') WHERE id = ?`,
       [checkId]
     );
     
-    // Void all items
     this.db.run(
       'UPDATE check_items SET voided = 1, void_reason = ? WHERE check_id = ?',
       [reason || 'Check voided', checkId]
@@ -377,7 +504,7 @@ export class CapsService {
   
   private getCheckPayments(checkId: string): Payment[] {
     const rows = this.db.all<PaymentRow>(
-      'SELECT * FROM payments WHERE check_id = ? ORDER BY created_at',
+      'SELECT * FROM check_payments WHERE check_id = ? ORDER BY created_at',
       [checkId]
     );
     
@@ -392,8 +519,8 @@ export class CapsService {
         isCardMedia: tender?.is_card_media === 1,
         isGiftMedia: tender?.is_gift_media === 1,
         amount: row.amount,
-        tip: row.tip,
-        reference: row.reference || undefined,
+        tip: row.tip_amount || 0,
+        reference: row.reference_number || undefined,
         status: row.status as 'authorized' | 'captured' | 'voided',
       };
     });
@@ -401,30 +528,59 @@ export class CapsService {
   
   private getTotalPayments(checkId: string): number {
     const result = this.db.get<{ total: number }>(
-      `SELECT COALESCE(SUM(amount + tip), 0) as total FROM payments WHERE check_id = ? AND status != 'voided'`,
+      `SELECT COALESCE(SUM(amount - change_amount), 0) as total FROM check_payments WHERE check_id = ? AND status != 'voided' AND voided = 0`,
       [checkId]
     );
     return result?.total || 0;
   }
   
   private recalculateTotals(checkId: string): void {
-    // Calculate subtotal from non-voided items
-    const subtotalResult = this.db.get<{ subtotal: number }>(
-      `SELECT COALESCE(SUM(quantity * unit_price), 0) as subtotal 
-       FROM check_items WHERE check_id = ? AND voided = 0`,
+    const items = this.db.all<{ quantity: number; unit_price: number; tax_group_id: string | null }>(
+      `SELECT quantity, unit_price, tax_group_id FROM check_items WHERE check_id = ? AND voided = 0`,
       [checkId]
     );
     
-    const subtotal = subtotalResult?.subtotal || 0;
+    let subtotal = 0;
+    let totalTax = 0;
     
-    // For now, assume 8% tax (in production, would use tax groups)
-    const taxRate = 0.08;
-    const tax = Math.round(subtotal * taxRate);
-    const total = subtotal + tax;
+    for (const item of items) {
+      const lineTotal = item.quantity * item.unit_price;
+      subtotal += lineTotal;
+      
+      if (item.tax_group_id) {
+        const taxGroup = this.db.getTaxGroup(item.tax_group_id);
+        if (taxGroup) {
+          const rate = parseFloat(taxGroup.rate) || 0;
+          if (taxGroup.tax_mode === 'inclusive') {
+            const taxPortion = Math.round(lineTotal - (lineTotal / (1 + rate)));
+            totalTax += taxPortion;
+          } else {
+            totalTax += Math.round(lineTotal * rate);
+          }
+        }
+      }
+    }
+    
+    const discountResult = this.db.get<{ total: number }>(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM check_discounts WHERE check_id = ? AND voided = 0`,
+      [checkId]
+    );
+    const discountTotal = discountResult?.total || 0;
+    
+    const serviceChargeResult = this.db.get<{ total: number }>(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM check_service_charges WHERE check_id = ? AND voided = 0`,
+      [checkId]
+    );
+    const serviceChargeTotal = serviceChargeResult?.total || 0;
+    
+    const total = Math.max(0, subtotal + totalTax - discountTotal + serviceChargeTotal);
+    
+    const totalPayments = this.getTotalPayments(checkId);
+    const amountDue = Math.max(0, total - totalPayments);
     
     this.db.run(
-      'UPDATE checks SET subtotal = ?, tax = ?, total = ? WHERE id = ?',
-      [subtotal, tax, total, checkId]
+      `UPDATE checks SET subtotal = ?, tax = ?, discount_total = ?, service_charge_total = ?, total = ?, amount_due = ? WHERE id = ?`,
+      [subtotal, totalTax, discountTotal, serviceChargeTotal, total, amountDue, checkId]
     );
   }
 }
@@ -449,14 +605,16 @@ interface AddItemParams {
 
 interface AddPaymentParams {
   tenderId: string;
-  tenderType: 'cash' | 'credit' | 'debit' | 'gift'; // display/label only, not used for behavioral logic
+  tenderType: 'cash' | 'credit' | 'debit' | 'gift';
   amount: number;
   tip?: number;
   reference?: string;
+  managerPin?: string;
 }
 
 interface Check {
   id: string;
+  txnGroupId: string;
   checkNumber: number;
   rvcId: string;
   employeeId: string;
@@ -467,7 +625,11 @@ interface Check {
   subtotal: number;
   tax: number;
   total: number;
+  discountTotal: number;
+  serviceChargeTotal: number;
+  amountDue: number;
   currentRound: number;
+  businessDate?: string;
   items: CheckItem[];
   payments: Payment[];
   createdAt: string;
@@ -505,6 +667,7 @@ interface Payment {
 
 interface CheckRow {
   id: string;
+  txn_group_id: string | null;
   check_number: number;
   rvc_id: string;
   employee_id: string;
@@ -515,7 +678,11 @@ interface CheckRow {
   subtotal: number;
   tax: number;
   total: number;
+  discount_total: number;
+  service_charge_total: number;
+  amount_due: number;
   current_round: number;
+  business_date: string | null;
   created_at: string;
   closed_at: string | null;
 }
@@ -541,9 +708,11 @@ interface PaymentRow {
   tender_id: string;
   tender_type: string;
   amount: number;
-  tip: number;
-  reference: string | null;
+  tip_amount: number;
+  change_amount: number;
+  reference_number: string | null;
   status: string;
+  voided: number;
 }
 
 export type { Check, CheckItem, Payment, CreateCheckParams, AddItemParams, AddPaymentParams };

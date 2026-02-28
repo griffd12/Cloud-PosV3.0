@@ -90,6 +90,10 @@ export class Database {
       this.migrateToV4();
     }
     
+    if (fromVersion < 5) {
+      this.migrateToV5();
+    }
+    
     this.run('INSERT INTO schema_version (version) VALUES (?)', [toVersion]);
   }
   
@@ -159,6 +163,41 @@ export class Database {
     this.run(`UPDATE tenders SET allow_tips = 1 WHERE type IN ('credit', 'debit') AND allow_tips = 0`);
     
     console.log('[DB] v4 migration complete');
+  }
+  
+  private migrateToV5(): void {
+    console.log('[DB] Running v5 migration: transaction_journal, checks.txn_group_id');
+    
+    try {
+      this.run(`ALTER TABLE checks ADD COLUMN txn_group_id TEXT`);
+    } catch (e: any) {
+      if (!e.message?.includes('duplicate column')) throw e;
+    }
+    
+    this.run(`
+      CREATE TABLE IF NOT EXISTS transaction_journal (
+        event_id TEXT PRIMARY KEY,
+        txn_group_id TEXT NOT NULL,
+        device_id TEXT NOT NULL,
+        rvc_id TEXT NOT NULL,
+        business_date TEXT NOT NULL,
+        check_id TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        config_version TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        sync_state TEXT NOT NULL DEFAULT 'pending',
+        sync_attempts INTEGER NOT NULL DEFAULT 0,
+        synced_at TEXT
+      )
+    `);
+    this.run(`CREATE INDEX IF NOT EXISTS idx_journal_sync_state ON transaction_journal(sync_state)`);
+    this.run(`CREATE INDEX IF NOT EXISTS idx_journal_check ON transaction_journal(check_id)`);
+    this.run(`CREATE INDEX IF NOT EXISTS idx_journal_business_date ON transaction_journal(business_date)`);
+    this.run(`CREATE INDEX IF NOT EXISTS idx_journal_txn_group ON transaction_journal(txn_group_id)`);
+    this.run(`CREATE INDEX IF NOT EXISTS idx_journal_device ON transaction_journal(device_id)`);
+    
+    console.log('[DB] v5 migration complete');
   }
   
   // ==========================================================================
@@ -1146,6 +1185,101 @@ export class Database {
     }
     
     return this.all(sql, params);
+  }
+  
+  // ==========================================================================
+  // Transaction Journal (Immutable — append-only, never update payload or delete)
+  // ==========================================================================
+  
+  writeJournalEntry(entry: {
+    eventId: string;
+    txnGroupId: string;
+    deviceId: string;
+    rvcId: string;
+    businessDate: string;
+    checkId: string;
+    eventType: string;
+    payloadJson: string;
+    configVersion?: string;
+  }): void {
+    this.run(
+      `INSERT INTO transaction_journal (event_id, txn_group_id, device_id, rvc_id, business_date, check_id, event_type, payload_json, config_version, sync_state)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [
+        entry.eventId, entry.txnGroupId, entry.deviceId, entry.rvcId,
+        entry.businessDate, entry.checkId, entry.eventType, entry.payloadJson,
+        entry.configVersion || null,
+      ]
+    );
+  }
+  
+  getUnsyncedJournalEntries(limit: number = 10): JournalEntry[] {
+    return this.all<JournalEntry>(
+      `SELECT * FROM transaction_journal 
+       WHERE sync_state = 'pending' 
+       ORDER BY created_at ASC 
+       LIMIT ?`,
+      [limit]
+    );
+  }
+  
+  markJournalSynced(eventId: string): void {
+    this.run(
+      `UPDATE transaction_journal SET sync_state = 'synced', synced_at = datetime('now') WHERE event_id = ?`,
+      [eventId]
+    );
+  }
+  
+  markJournalFailed(eventId: string): void {
+    this.run(
+      `UPDATE transaction_journal SET sync_state = 'pending', sync_attempts = sync_attempts + 1 WHERE event_id = ?`,
+      [eventId]
+    );
+  }
+  
+  getJournalByCheck(checkId: string): JournalEntry[] {
+    return this.all<JournalEntry>(
+      `SELECT * FROM transaction_journal WHERE check_id = ? ORDER BY created_at ASC`,
+      [checkId]
+    );
+  }
+  
+  getJournalByTxnGroup(txnGroupId: string): JournalEntry[] {
+    return this.all<JournalEntry>(
+      `SELECT * FROM transaction_journal WHERE txn_group_id = ? ORDER BY created_at ASC`,
+      [txnGroupId]
+    );
+  }
+  
+  getJournalStats(businessDate: string): { total: number; pending: number; synced: number; failed: number; byEventType: Record<string, number> } {
+    const counts = this.all<{ sync_state: string; cnt: number }>(
+      `SELECT sync_state, COUNT(*) as cnt FROM transaction_journal WHERE business_date = ? GROUP BY sync_state`,
+      [businessDate]
+    );
+    
+    const byEventType: Record<string, number> = {};
+    const eventCounts = this.all<{ event_type: string; cnt: number }>(
+      `SELECT event_type, COUNT(*) as cnt FROM transaction_journal WHERE business_date = ? GROUP BY event_type`,
+      [businessDate]
+    );
+    for (const row of eventCounts) {
+      byEventType[row.event_type] = row.cnt;
+    }
+    
+    let total = 0, pending = 0, synced = 0, failed = 0;
+    for (const row of counts) {
+      total += row.cnt;
+      if (row.sync_state === 'pending') pending = row.cnt;
+      else if (row.sync_state === 'synced') synced = row.cnt;
+      else if (row.sync_state === 'failed') failed = row.cnt;
+    }
+    
+    return { total, pending, synced, failed, byEventType };
+  }
+  
+  getJournalEntryCount(): number {
+    const row = this.get<{ count: number }>('SELECT COUNT(*) as count FROM transaction_journal');
+    return row?.count ?? 0;
   }
   
   // ==========================================================================
@@ -2328,7 +2462,110 @@ export class Database {
     this.db.pragma('wal_checkpoint(TRUNCATE)');
   }
   
+  getOfflineDailySummary(businessDate: string): any {
+    const salesRow = this.get<{ subtotal: number; tax: number; discount_total: number; total: number; count: number }>(
+      `SELECT COALESCE(SUM(subtotal), 0) as subtotal, COALESCE(SUM(tax), 0) as tax, 
+              COALESCE(SUM(discount_total), 0) as discount_total, COALESCE(SUM(total), 0) as total,
+              COUNT(*) as count
+       FROM checks WHERE status = 'closed' AND business_date = ?`,
+      [businessDate]
+    );
+
+    const openChecks = this.get<{ count: number }>(
+      `SELECT COUNT(*) as count FROM checks WHERE status = 'open' AND business_date = ?`,
+      [businessDate]
+    );
+
+    const voidedChecks = this.get<{ count: number; total: number }>(
+      `SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total FROM checks WHERE status = 'voided' AND business_date = ?`,
+      [businessDate]
+    );
+
+    const cashPayments = this.get<{ count: number; total: number }>(
+      `SELECT COUNT(*) as count, COALESCE(SUM(cp.amount), 0) as total 
+       FROM check_payments cp JOIN tenders t ON cp.tender_id = t.id 
+       WHERE t.is_cash_media = 1 AND cp.business_date = ? AND cp.voided = 0`,
+      [businessDate]
+    );
+
+    const cardPayments = this.get<{ count: number; total: number }>(
+      `SELECT COUNT(*) as count, COALESCE(SUM(cp.amount), 0) as total 
+       FROM check_payments cp JOIN tenders t ON cp.tender_id = t.id 
+       WHERE t.is_card_media = 1 AND cp.business_date = ? AND cp.voided = 0`,
+      [businessDate]
+    );
+
+    const giftPayments = this.get<{ count: number; total: number }>(
+      `SELECT COUNT(*) as count, COALESCE(SUM(cp.amount), 0) as total 
+       FROM check_payments cp JOIN tenders t ON cp.tender_id = t.id 
+       WHERE t.is_gift_media = 1 AND cp.business_date = ? AND cp.voided = 0`,
+      [businessDate]
+    );
+
+    const journalStats = this.getJournalStats(businessDate);
+
+    const kdsActive = this.get<{ count: number }>(
+      `SELECT COUNT(*) as count FROM kds_tickets WHERE status = 'active'`
+    );
+
+    const kdsBumped = this.get<{ count: number }>(
+      `SELECT COUNT(*) as count FROM kds_tickets WHERE status = 'bumped'`
+    );
+
+    const kdsAvgTime = this.get<{ avg_seconds: number }>(
+      `SELECT COALESCE(AVG(
+        CAST((julianday(bumped_at) - julianday(created_at)) * 86400 AS INTEGER)
+       ), 0) as avg_seconds
+       FROM kds_tickets WHERE status = 'bumped' AND bumped_at IS NOT NULL`
+    );
+
+    return {
+      businessDate,
+      generatedAt: new Date().toISOString(),
+      sales: {
+        netSales: salesRow?.subtotal || 0,
+        taxTotal: salesRow?.tax || 0,
+        discountTotal: salesRow?.discount_total || 0,
+        grandTotal: salesRow?.total || 0,
+        closedCheckCount: salesRow?.count || 0,
+      },
+      checks: {
+        open: openChecks?.count || 0,
+        closed: salesRow?.count || 0,
+        voided: voidedChecks?.count || 0,
+        voidedTotal: voidedChecks?.total || 0,
+      },
+      payments: {
+        cash: { count: cashPayments?.count || 0, total: cashPayments?.total || 0 },
+        card: { count: cardPayments?.count || 0, total: cardPayments?.total || 0 },
+        gift: { count: giftPayments?.count || 0, total: giftPayments?.total || 0 },
+      },
+      kds: {
+        activeTickets: kdsActive?.count || 0,
+        bumpedTickets: kdsBumped?.count || 0,
+        avgTicketSeconds: Math.round(kdsAvgTime?.avg_seconds || 0),
+      },
+      journal: journalStats,
+    };
+  }
+  
   close(): void {
     this.db.close();
   }
+}
+
+export interface JournalEntry {
+  event_id: string;
+  txn_group_id: string;
+  device_id: string;
+  rvc_id: string;
+  business_date: string;
+  check_id: string;
+  event_type: string;
+  payload_json: string;
+  config_version: string | null;
+  created_at: string;
+  sync_state: string;
+  sync_attempts: number;
+  synced_at: string | null;
 }

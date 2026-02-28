@@ -18,7 +18,8 @@
     "service:start": "node scripts/service-wrappers/windows-service.js start",
     "service:stop": "node scripts/service-wrappers/windows-service.js stop",
     "service:status": "node scripts/service-wrappers/windows-service.js status",
-    "verify-schema": "tsx src/verify-schema.ts"
+    "verify-schema": "tsx src/verify-schema.ts",
+    "proof-mode": "tsx src/proof-mode.ts"
   },
   "dependencies": {
     "better-sqlite3": "^9.2.2",

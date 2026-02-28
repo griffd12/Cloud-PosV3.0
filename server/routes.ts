@@ -11,7 +11,7 @@ import archiver from "archiver";
 import { storage } from "./storage";
 import { db } from "./db";
 import { eq, ne, sql, inArray, and, desc } from "drizzle-orm";
-import { emcUsers, enterprises, properties, employeeAssignments, configOverrides, checks, onlineOrders, onlineOrderSources, kdsTickets, kdsTicketItems, checkItems, checkServiceCharges, privileges } from "@shared/schema";
+import { emcUsers, enterprises, properties, employeeAssignments, configOverrides, checks, onlineOrders, onlineOrderSources, kdsTickets, kdsTicketItems, checkItems, checkServiceCharges, privileges, serviceHostTransactions } from "@shared/schema";
 import { uberEatsIntegration } from "./integrations/uber-eats";
 import { grubhubIntegration } from "./integrations/grubhub";
 import { doorDashIntegration } from "./integrations/doordash";
@@ -24347,11 +24347,32 @@ connect();
       }
 
       const cloudIds: Record<string, string> = {};
+      const acknowledged: string[] = [];
+      const skipped: string[] = [];
       let processed = 0;
 
-      for (const tx of transactions) {
+      const txList = Array.isArray(transactions) ? transactions : (req.body.batch ? transactions : [transactions]);
+
+      for (const tx of txList) {
         try {
-          // Store the transaction record
+          if (tx.localId) {
+            const existing = await db.select()
+              .from(serviceHostTransactions)
+              .where(
+                and(
+                  eq(serviceHostTransactions.localId, tx.localId),
+                  eq(serviceHostTransactions.serviceHostId, serviceHostId)
+                )
+              )
+              .limit(1);
+            
+            if (existing.length > 0) {
+              skipped.push(tx.localId);
+              processed++;
+              continue;
+            }
+          }
+
           const storedTx = await storage.createServiceHostTransaction({
             serviceHostId,
             propertyId,
@@ -24361,9 +24382,7 @@ connect();
             data: tx.data,
           });
 
-          // Process based on transaction type
           if (tx.type === "check_closed" && tx.data) {
-            // Create check in cloud database
             const cloudCheck = await storage.createCheck({
               checkNumber: tx.data.checkNumber,
               employeeId: tx.data.employeeId,
@@ -24380,7 +24399,6 @@ connect();
 
             cloudIds[tx.localId] = cloudCheck.id;
           } else if (tx.type === "time_punch" && tx.data) {
-            // Create time punch in cloud database
             const cloudPunch = await storage.createTimePunch({
               employeeId: tx.data.employeeId,
               propertyId,
@@ -24394,6 +24412,7 @@ connect();
             cloudIds[tx.localId] = cloudPunch.id;
           }
 
+          acknowledged.push(tx.localId);
           processed++;
         } catch (txError: any) {
           console.error(`Error processing transaction ${tx.localId}:`, txError);
@@ -24403,11 +24422,93 @@ connect();
       res.json({
         success: true,
         processed,
+        acknowledged,
+        skipped,
         cloudIds,
       });
     } catch (error: any) {
       console.error("Post transactions error:", error);
       res.status(500).json({ error: "Failed to process transactions" });
+    }
+  });
+
+  // GET /api/sync/verify - Cloud verification endpoint for Service Host sync validation
+  // Returns summary of what the cloud has received from a specific Service Host for a business date
+  app.get("/api/sync/verify", async (req, res) => {
+    try {
+      const serviceHostToken = req.headers['x-service-host-token'] as string;
+      const serviceHostId = req.query.serviceHostId as string;
+      const businessDate = req.query.businessDate as string;
+
+      if (!serviceHostId || !businessDate) {
+        return res.status(400).json({ error: "serviceHostId and businessDate query parameters are required" });
+      }
+
+      const serviceHost = await storage.getServiceHost(serviceHostId);
+      if (!serviceHost) {
+        return res.status(404).json({ error: "Service Host not found" });
+      }
+
+      if (!serviceHostToken || serviceHost.registrationToken !== serviceHostToken) {
+        return res.status(401).json({ error: "Invalid Service Host authentication" });
+      }
+
+      const allTxns = await db
+        .select()
+        .from(serviceHostTransactions)
+        .where(
+          and(
+            eq(serviceHostTransactions.serviceHostId, serviceHostId),
+            eq(serviceHostTransactions.businessDate, businessDate)
+          )
+        );
+
+      const journalEntriesReceived = allTxns.length;
+
+      const checksCreatedTxns = allTxns.filter(t => t.transactionType === "check_closed");
+      const checksCreated = checksCreatedTxns.length;
+
+      const paymentsCreated = allTxns.filter(t => t.transactionType === "payment_added").length;
+
+      const kdsEventTypes = ["kds_ticket_created", "kds_ticket_completed", "kds_item_bumped", "kds_item_recalled"];
+      const kdsEventsReceived = allTxns.filter(t => kdsEventTypes.includes(t.transactionType)).length;
+
+      const localIdSet = new Set<string>();
+      const duplicateEventIds: string[] = [];
+      for (const txn of allTxns) {
+        if (localIdSet.has(txn.localId)) {
+          duplicateEventIds.push(txn.localId);
+        } else {
+          localIdSet.add(txn.localId);
+        }
+      }
+
+      let totalSales = 0;
+      const checksDetail: { checkNumber: number; total: string; status: string }[] = [];
+
+      for (const txn of checksCreatedTxns) {
+        const data = txn.data as any;
+        const total = parseFloat(data?.total || "0");
+        totalSales += total;
+        checksDetail.push({
+          checkNumber: data?.checkNumber || 0,
+          total: total.toFixed(2),
+          status: data?.status || "closed",
+        });
+      }
+
+      res.json({
+        journalEntriesReceived,
+        checksCreated,
+        paymentsCreated,
+        kdsEventsReceived,
+        totalSales: totalSales.toFixed(2),
+        duplicateEventIds,
+        checksDetail,
+      });
+    } catch (error: any) {
+      console.error("Sync verify error:", error);
+      res.status(500).json({ error: "Failed to verify sync data" });
     }
   });
 

@@ -71,6 +71,8 @@ export class TransactionSync {
     this.isProcessing = true;
     
     try {
+      await this.syncJournalEntries();
+      
       const items = this.db.getPendingSyncItems(10);
       
       if (items.length === 0) {
@@ -101,6 +103,67 @@ export class TransactionSync {
       }
     } finally {
       this.isProcessing = false;
+    }
+  }
+  
+  async syncJournalEntries(): Promise<{ acknowledged: string[]; skipped: string[] }> {
+    const entries = this.db.getUnsyncedJournalEntries(10);
+    
+    if (entries.length === 0) {
+      return { acknowledged: [], skipped: [] };
+    }
+    
+    logger.info(`Syncing ${entries.length} journal entries`);
+    
+    try {
+      const transactions = entries.map(entry => ({
+        localId: entry.event_id,
+        type: entry.event_type,
+        action: 'create',
+        data: {
+          eventId: entry.event_id,
+          txnGroupId: entry.txn_group_id,
+          deviceId: entry.device_id,
+          rvcId: entry.rvc_id,
+          businessDate: entry.business_date,
+          checkId: entry.check_id,
+          eventType: entry.event_type,
+          payload: JSON.parse(entry.payload_json),
+          configVersion: entry.config_version,
+          createdAt: entry.created_at,
+        },
+      }));
+      
+      const result = await this.circuitBreaker.execute(() =>
+        this.cloud.post<JournalSyncResponse>('/api/sync/transactions', {
+          batch: true,
+          transactions,
+        })
+      );
+      
+      for (const eventId of (result.acknowledged || [])) {
+        this.db.markJournalSynced(eventId);
+      }
+      
+      for (const eventId of (result.skipped || [])) {
+        this.db.markJournalSynced(eventId);
+      }
+      
+      logger.info(`Journal sync complete: ${result.acknowledged?.length || 0} acknowledged, ${result.skipped?.length || 0} skipped`);
+      
+      return {
+        acknowledged: result.acknowledged || [],
+        skipped: result.skipped || [],
+      };
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      logger.error('Journal sync batch failed', error);
+      
+      for (const entry of entries) {
+        this.db.markJournalFailed(entry.event_id);
+      }
+      
+      throw error;
     }
   }
   
@@ -232,8 +295,10 @@ export class TransactionSync {
   }
   
   getStats(): SyncStats {
+    const journalStats = this.db.getJournalStats(new Date().toISOString().split('T')[0]);
     return {
       queueSize: this.getQueueSize(),
+      journalPending: journalStats?.pending || 0,
       circuitBreakerState: this.getCircuitBreakerState(),
       consecutiveFailures: this.consecutiveFailures,
       isProcessing: this.isProcessing,
@@ -252,8 +317,15 @@ interface SyncQueueItem {
   error: string | null;
 }
 
+interface JournalSyncResponse {
+  processed: number;
+  acknowledged: string[];
+  skipped: string[];
+}
+
 interface SyncStats {
   queueSize: number;
+  journalPending: number;
   circuitBreakerState: string;
   consecutiveFailures: number;
   isProcessing: boolean;

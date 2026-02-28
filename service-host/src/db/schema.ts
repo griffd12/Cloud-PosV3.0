@@ -14,7 +14,7 @@
 // CONFIGURATION TABLES (Synced from cloud)
 // =============================================================================
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const CREATE_SCHEMA_SQL = `
 -- Schema version tracking
@@ -458,12 +458,39 @@ CREATE TABLE IF NOT EXISTS service_charges (
 );
 
 -- =============================================================================
+-- TRANSACTION JOURNAL (Immutable audit trail — append-only, never update/delete)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS transaction_journal (
+  event_id TEXT PRIMARY KEY,
+  txn_group_id TEXT NOT NULL,
+  device_id TEXT NOT NULL,
+  rvc_id TEXT NOT NULL,
+  business_date TEXT NOT NULL,
+  check_id TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  config_version TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  sync_state TEXT NOT NULL DEFAULT 'pending',
+  sync_attempts INTEGER NOT NULL DEFAULT 0,
+  synced_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_journal_sync_state ON transaction_journal(sync_state);
+CREATE INDEX IF NOT EXISTS idx_journal_check ON transaction_journal(check_id);
+CREATE INDEX IF NOT EXISTS idx_journal_business_date ON transaction_journal(business_date);
+CREATE INDEX IF NOT EXISTS idx_journal_txn_group ON transaction_journal(txn_group_id);
+CREATE INDEX IF NOT EXISTS idx_journal_device ON transaction_journal(device_id);
+
+-- =============================================================================
 -- TRANSACTIONAL TABLES (Local state, syncs to cloud)
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS checks (
   id TEXT PRIMARY KEY,
   cloud_id TEXT,
+  txn_group_id TEXT,
   check_number INTEGER NOT NULL,
   rvc_id TEXT NOT NULL REFERENCES rvcs(id),
   employee_id TEXT NOT NULL REFERENCES employees(id),

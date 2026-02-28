@@ -50,7 +50,6 @@ export class KdsController {
     }
   }
   
-  // Create a new KDS ticket from kitchen items
   createTicket(params: CreateTicketParams): KdsTicket {
     const id = randomUUID();
     
@@ -80,7 +79,17 @@ export class KdsController {
       createdAt: new Date().toISOString(),
     };
     
-    // Broadcast to relevant KDS clients
+    const txnGroupId = this.getTxnGroupId(params.checkId);
+    this.writeJournal(params.checkId, txnGroupId, 'kds_ticket_created', {
+      ticketId: id,
+      checkNumber: params.checkNumber,
+      stationId: params.stationId,
+      orderType: params.orderType,
+      itemCount: params.items.length,
+      items: params.items,
+      priority: params.priority || 0,
+    });
+    
     this.broadcastToStation(params.stationId || null, {
       type: 'kds_ticket_new',
       ticket,
@@ -117,14 +126,25 @@ export class KdsController {
     }));
   }
   
-  // Bump a ticket (mark as complete)
   bumpTicket(ticketId: string, stationId?: string): void {
+    const ticket = this.getTicket(ticketId);
+    
     this.db.run(
       `UPDATE kds_tickets SET status = 'bumped', bumped_at = datetime('now') WHERE id = ?`,
       [ticketId]
     );
     
-    // Broadcast bump
+    if (ticket) {
+      const txnGroupId = this.getTxnGroupId(ticket.checkId);
+      this.writeJournal(ticket.checkId, txnGroupId, 'kds_ticket_completed', {
+        ticketId,
+        checkId: ticket.checkId,
+        checkNumber: ticket.checkNumber,
+        stationId: stationId || ticket.stationId,
+        itemCount: ticket.items.length,
+      });
+    }
+    
     this.broadcastToAll({
       type: 'kds_ticket_bumped',
       ticketId,
@@ -134,16 +154,23 @@ export class KdsController {
     console.log(`Ticket ${ticketId} bumped`);
   }
   
-  // Recall a bumped ticket
   recallTicket(ticketId: string): void {
+    const ticket = this.getTicket(ticketId);
+    
     this.db.run(
       `UPDATE kds_tickets SET status = 'active', bumped_at = NULL WHERE id = ?`,
       [ticketId]
     );
     
-    const ticket = this.getTicket(ticketId);
     if (ticket) {
-      // Broadcast recall
+      const txnGroupId = this.getTxnGroupId(ticket.checkId);
+      this.writeJournal(ticket.checkId, txnGroupId, 'kds_item_recalled', {
+        ticketId,
+        checkId: ticket.checkId,
+        checkNumber: ticket.checkNumber,
+        stationId: ticket.stationId,
+      });
+      
       this.broadcastToAll({
         type: 'kds_ticket_recalled',
         ticket,
@@ -213,7 +240,25 @@ export class KdsController {
     }
   }
   
-  // WebSocket helpers
+  private getTxnGroupId(checkId: string): string {
+    const row = this.db.get<{ txn_group_id: string | null }>('SELECT txn_group_id FROM checks WHERE id = ?', [checkId]);
+    return row?.txn_group_id || checkId;
+  }
+  
+  private writeJournal(checkId: string, txnGroupId: string, eventType: string, payload: any): void {
+    const businessDate = new Date().toISOString().split('T')[0];
+    this.db.writeJournalEntry({
+      eventId: randomUUID(),
+      txnGroupId,
+      deviceId: 'kds',
+      rvcId: '',
+      businessDate,
+      checkId,
+      eventType,
+      payloadJson: JSON.stringify(payload),
+    });
+  }
+  
   private sendToClient(ws: WebSocket, message: any): void {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(message));
