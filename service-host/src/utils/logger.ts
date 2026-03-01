@@ -36,8 +36,15 @@ export interface LoggerConfig {
   consoleOutput: boolean;
 }
 
+function resolveLogDir(): string {
+  if (process.env.SERVICE_HOST_DATA_DIR) {
+    return path.join(process.env.SERVICE_HOST_DATA_DIR, 'logs');
+  }
+  return './data/logs';
+}
+
 const DEFAULT_CONFIG: LoggerConfig = {
-  logDir: './data/logs',
+  logDir: resolveLogDir(),
   maxFileSizeMB: 10,
   maxFiles: 5,
   cloudReportingEnabled: true,
