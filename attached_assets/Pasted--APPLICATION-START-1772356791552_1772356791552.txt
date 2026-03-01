@@ -1,0 +1,122 @@
+================================================================================
+  APPLICATION STARTUP - 2026-03-01T09:18:28.656Z
+================================================================================
+[2026-03-01T09:18:28.657Z] [INFO] [App] Cloud POS starting | DATA: {"version":"3.1.11","mode":"pos","kiosk":false,"platform":"win32"}
+[2026-03-01T09:18:28.659Z] [INFO] [App] Directories | DATA: {"config":"C:\\Users\\SNS-001\\AppData\\Local\\Cloud POS\\config","data":"C:\\Users\\SNS-001\\AppData\\Local\\Cloud POS\\data","logs":"C:\\Users\\SNS-001\\AppData\\Local\\Cloud POS\\logs"}
+[2026-03-01T09:18:28.661Z] [INFO] [App] Setup previously completed, initializing all services
+[2026-03-01T09:18:28.663Z] [INFO] [AutoStartup] Registered "Cloud POS" for auto-startup on boot | DATA: {"exePath":"C:\\Program Files\\Cloud POS\\Cloud POS\\Cloud POS.exe","mode":"pos"}
+[2026-03-01T09:18:28.665Z] [WARN] [AutoStartup] Upgrade migration: auto-startup registration could not be confirmed, will retry on next launch
+[2026-03-01T09:18:28.666Z] [INFO] [App] Initializing services after setup verification
+[2026-03-01T09:18:28.667Z] [INFO] [CAPS] Loaded cached CAPS config | DATA: {"serviceHostUrl":"http://127.0.0.1:3001","isCaps":true}
+[2026-03-01T09:18:28.810Z] [INFO] [OfflineDB] SQLite database initialized | DATA: {"path":"C:\\Users\\SNS-001\\AppData\\Local\\Cloud POS\\data\\offline.db"}
+[2026-03-01T09:18:28.836Z] [INFO] [OfflineDB] Enhanced offline database initialized
+[2026-03-01T09:18:28.960Z] [INFO] [Connectivity] Check interval set to 30s (mode: green)
+[2026-03-01T09:18:29.231Z] [INFO] [OfflineDB] Cloud reachable, starting initial data sync
+[2026-03-01T09:18:31.615Z] [INFO] [OfflineDB] Initial sync completed | DATA: {"tables":34,"errors":0}
+[2026-03-01T09:18:31.758Z] [INFO] [Interceptor] Service host URL set: http://127.0.0.1:3001
+[2026-03-01T09:18:31.760Z] [INFO] [CAPS] Activation config fetched | DATA: {"serviceHostUrl":"http://127.0.0.1:3001","capsWorkstationId":"32fb06f3-837f-42ed-a6f5-90436ca62e06","capsWorkstationName":"SNS-001-WS01","isCaps":true}
+[2026-03-01T09:18:31.762Z] [INFO] [ServiceHost] Starting embedded service host (CAPS mode) | DATA: {"dataDir":"C:\\Users\\SNS-001\\AppData\\Local\\Cloud POS\\data\\service-host","port":3001,"cloudUrl":"https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev"}
+[2026-03-01T09:18:32.803Z] [WARN] [ServiceHost] Failed to start Service Host: SqliteError: no such table: sync_metadata
+    at Database.prepare (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\node_modules\better-sqlite3\lib\methods\wrappers.js:5:21)
+    at Database.get (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:29213:20)
+    at Database.getSyncMetadata (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:29242:22)
+    at ConfigSync.loadSyncState (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:31691:30)
+    at new ConfigSync (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:31680:10)
+    at new ServiceHost (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:35911:23)
+    at main (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:36136:25)
+    at Object.<anonymous> (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:36139:3)
+    at Module._compile (node:internal/modules/cjs/loader:1769:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1902:10) {
+  code: 'SQLITE_ERROR'
+}
+[2026-03-01T09:18:32.818Z] [WARN] [ServiceHost] Service host process exited | DATA: {"code":1,"signal":null}
+[2026-03-01T09:18:37.820Z] [INFO] [ServiceHost] Restarting service host after crash...
+[2026-03-01T09:18:37.825Z] [INFO] [ServiceHost] Starting embedded service host (CAPS mode) | DATA: {"dataDir":"C:\\Users\\SNS-001\\AppData\\Local\\Cloud POS\\data\\service-host","port":3001,"cloudUrl":"https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev"}
+[2026-03-01T09:18:38.421Z] [WARN] [ServiceHost] Failed to start Service Host: SqliteError: no such table: sync_metadata
+    at Database.prepare (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\node_modules\better-sqlite3\lib\methods\wrappers.js:5:21)
+    at Database.get (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:29213:20)
+    at Database.getSyncMetadata (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:29242:22)
+    at ConfigSync.loadSyncState (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:31691:30)
+    at new ConfigSync (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:31680:10)
+    at new ServiceHost (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:35911:23)
+    at main (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:36136:25)
+    at Object.<anonymous> (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:36139:3)
+    at Module._compile (node:internal/modules/cjs/loader:1769:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1902:10) {
+  code: 'SQLITE_ERROR'
+}
+[2026-03-01T09:18:38.437Z] [WARN] [ServiceHost] Service host process exited | DATA: {"code":1,"signal":null}
+[2026-03-01T09:18:42.133Z] [WARN] [ServiceHost] Service host started but health check not responding yet
+[2026-03-01T09:18:42.138Z] [INFO] [App] All services initialized successfully
+[2026-03-01T09:18:42.159Z] [INFO] [Interceptor] HTTPS protocol interceptor registered for offline support
+[2026-03-01T09:18:42.230Z] [INFO] [Window] Launching POS mode | DATA: {"kiosk":false,"maximized":true}
+[2026-03-01T09:18:42.231Z] [INFO] [Window] Loading URL: https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev/
+[2026-03-01T09:18:42.819Z] [INFO] [Window] Loading screen shown, navigating to server...
+[2026-03-01T09:18:43.440Z] [INFO] [ServiceHost] Restarting service host after crash...
+[2026-03-01T09:18:43.441Z] [INFO] [ServiceHost] Starting embedded service host (CAPS mode) | DATA: {"dataDir":"C:\\Users\\SNS-001\\AppData\\Local\\Cloud POS\\data\\service-host","port":3001,"cloudUrl":"https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev"}
+[2026-03-01T09:18:44.557Z] [WARN] [ServiceHost] Failed to start Service Host: SqliteError: no such table: sync_metadata
+    at Database.prepare (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\node_modules\better-sqlite3\lib\methods\wrappers.js:5:21)
+    at Database.get (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:29213:20)
+    at Database.getSyncMetadata (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:29242:22)
+    at ConfigSync.loadSyncState (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:31691:30)
+    at new ConfigSync (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:31680:10)
+    at new ServiceHost (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:35911:23)
+    at main (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:36136:25)
+    at Object.<anonymous> (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:36139:3)
+    at Module._compile (node:internal/modules/cjs/loader:1769:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1902:10) {
+  code: 'SQLITE_ERROR'
+}
+[2026-03-01T09:18:44.590Z] [WARN] [ServiceHost] Service host process exited | DATA: {"code":1,"signal":null}
+[2026-03-01T09:18:48.429Z] [WARN] [ServiceHost] Service host started but health check not responding yet
+[2026-03-01T09:18:48.921Z] [INFO] [Window] Page loaded successfully: https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev/
+[2026-03-01T09:18:49.593Z] [INFO] [ServiceHost] Restarting service host after crash...
+[2026-03-01T09:18:49.597Z] [INFO] [ServiceHost] Starting embedded service host (CAPS mode) | DATA: {"dataDir":"C:\\Users\\SNS-001\\AppData\\Local\\Cloud POS\\data\\service-host","port":3001,"cloudUrl":"https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev"}
+[2026-03-01T09:18:50.250Z] [WARN] [ServiceHost] Failed to start Service Host: SqliteError: no such table: sync_metadata
+    at Database.prepare (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\node_modules\better-sqlite3\lib\methods\wrappers.js:5:21)
+    at Database.get (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:29213:20)
+    at Database.getSyncMetadata (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:29242:22)
+    at ConfigSync.loadSyncState (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:31691:30)
+    at new ConfigSync (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:31680:10)
+    at new ServiceHost (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:35911:23)
+    at main (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:36136:25)
+    at Object.<anonymous> (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:36139:3)
+    at Module._compile (node:internal/modules/cjs/loader:1769:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1902:10) {
+  code: 'SQLITE_ERROR'
+}
+[2026-03-01T09:18:50.272Z] [WARN] [ServiceHost] Service host process exited | DATA: {"code":1,"signal":null}
+[2026-03-01T09:18:53.856Z] [WARN] [ServiceHost] Service host started but health check not responding yet
+[2026-03-01T09:18:55.272Z] [INFO] [ServiceHost] Restarting service host after crash...
+[2026-03-01T09:18:55.275Z] [INFO] [ServiceHost] Starting embedded service host (CAPS mode) | DATA: {"dataDir":"C:\\Users\\SNS-001\\AppData\\Local\\Cloud POS\\data\\service-host","port":3001,"cloudUrl":"https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev"}
+[2026-03-01T09:18:55.909Z] [WARN] [ServiceHost] Failed to start Service Host: SqliteError: no such table: sync_metadata
+    at Database.prepare (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\node_modules\better-sqlite3\lib\methods\wrappers.js:5:21)
+    at Database.get (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:29213:20)
+    at Database.getSyncMetadata (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:29242:22)
+    at ConfigSync.loadSyncState (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:31691:30)
+    at new ConfigSync (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:31680:10)
+    at new ServiceHost (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:35911:23)
+    at main (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:36136:25)
+    at Object.<anonymous> (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:36139:3)
+    at Module._compile (node:internal/modules/cjs/loader:1769:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1902:10) {
+  code: 'SQLITE_ERROR'
+}
+[2026-03-01T09:18:55.925Z] [WARN] [ServiceHost] Service host process exited | DATA: {"code":1,"signal":null}
+[2026-03-01T09:19:00.031Z] [WARN] [ServiceHost] Service host started but health check not responding yet
+[2026-03-01T09:19:00.927Z] [INFO] [ServiceHost] Restarting service host after crash...
+[2026-03-01T09:19:00.931Z] [INFO] [ServiceHost] Starting embedded service host (CAPS mode) | DATA: {"dataDir":"C:\\Users\\SNS-001\\AppData\\Local\\Cloud POS\\data\\service-host","port":3001,"cloudUrl":"https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev"}
+[2026-03-01T09:19:01.542Z] [WARN] [ServiceHost] Failed to start Service Host: SqliteError: no such table: sync_metadata
+    at Database.prepare (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\node_modules\better-sqlite3\lib\methods\wrappers.js:5:21)
+    at Database.get (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:29213:20)
+    at Database.getSyncMetadata (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:29242:22)
+    at ConfigSync.loadSyncState (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:31691:30)
+    at new ConfigSync (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:31680:10)
+    at new ServiceHost (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:35911:23)
+    at main (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:36136:25)
+    at Object.<anonymous> (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:36139:3)
+    at Module._compile (node:internal/modules/cjs/loader:1769:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1902:10) {
+  code: 'SQLITE_ERROR'
+}
+[2026-03-01T09:19:01.557Z] [WARN] [ServiceHost] Service host process exited | DATA: {"code":1,"signal":null}
