@@ -363,7 +363,7 @@ class OfflineApiInterceptor {
     }
 
     if (pathname.match(/^\/api\/auth\/manager-approval$/)) {
-      return { status: 503, data: { error: 'Manager approval unavailable in offline mode' } };
+      return this.validateManagerApprovalOffline(null, body);
     }
 
     if (pathname.match(/^\/api\/loyalty-members/)) {
@@ -602,7 +602,7 @@ class OfflineApiInterceptor {
     }
 
     if (pathname === '/api/auth/manager-approval') {
-      return { status: 503, data: { error: 'Manager approval unavailable in offline mode' } };
+      return this.validateManagerApprovalOffline(pathname, body);
     }
 
     if (pathname === '/api/time-clock/punch' || pathname.match(/^\/api\/time-punches/)) {
@@ -636,6 +636,26 @@ class OfflineApiInterceptor {
 
     if (pathname.match(/^\/api\/checks\/merge/)) {
       return { status: 503, data: { error: 'Check merge requires a cloud connection', offline: true } };
+    }
+
+    if (pathname.match(/^\/api\/checks\/[^/]+\/transfer/)) {
+      return { status: 503, data: { error: 'Check transfer requires cloud connectivity', offline: true } };
+    }
+
+    if (pathname.match(/^\/api\/checks\/[^/]+\/split/)) {
+      return this.splitCheckOffline(pathname, body);
+    }
+
+    if (pathname.match(/^\/api\/check-items\/[^/]+\/void/)) {
+      return this.voidCheckItemOffline(pathname, body);
+    }
+
+    if (pathname.match(/^\/api\/check-items\/[^/]+\/discount/)) {
+      return this.applyItemDiscountOffline(pathname, body);
+    }
+
+    if (pathname.match(/^\/api\/check-items\/[^/]+\/price-override/)) {
+      return this.priceOverrideOffline(pathname, body);
     }
 
     this.db.queueOperation('offline_post', pathname, 'POST', body, 5);
@@ -951,6 +971,269 @@ class OfflineApiInterceptor {
 
     this.db.savePrintJob(job);
     return { status: 201, data: { id: jobId, status: 'pending', offline: true } };
+  }
+
+  validateManagerApprovalOffline(pathname, body) {
+    const pin = body?.pin || body?.managerPin;
+    const requiredPrivilege = body?.requiredPrivilege || body?.privilege;
+    if (!pin) {
+      return { status: 400, data: { success: false, message: 'Manager PIN required' } };
+    }
+
+    const employees = this.db.getEntityList('employees', this.config.enterpriseId);
+    const manager = employees.find(emp => {
+      if (emp.pinHash === pin) return true;
+      if (emp.pin === pin) return true;
+      if (emp.posPin === pin) return true;
+      return false;
+    });
+
+    if (!manager) {
+      return { status: 401, data: { success: false, message: 'Invalid manager PIN (offline)' } };
+    }
+
+    const privs = manager.privileges || manager.rolePrivileges || [];
+    const hasAdmin = privs.includes('admin_access');
+    const hasManagerApproval = privs.includes('manager_approval');
+    const hasSpecific = requiredPrivilege ? privs.includes(requiredPrivilege) : true;
+
+    if (!hasAdmin && !hasManagerApproval && !hasSpecific) {
+      return { status: 403, data: { success: false, message: 'Employee does not have manager privileges (offline)' } };
+    }
+
+    appLogger.info('Interceptor', `Offline manager approval: ${manager.firstName} ${manager.lastName} for ${requiredPrivilege || 'general'}`);
+    return {
+      status: 200,
+      data: {
+        success: true,
+        approved: true,
+        managerId: manager.id,
+        managerName: `${manager.firstName} ${manager.lastName}`,
+        offlineAuth: true,
+      },
+    };
+  }
+
+  voidCheckItemOffline(pathname, body) {
+    const itemIdMatch = pathname.match(/^\/api\/check-items\/([^/]+)\/void/);
+    if (!itemIdMatch) return null;
+
+    const itemId = itemIdMatch[1];
+    const managerPin = body?.managerPin;
+
+    if (managerPin) {
+      const approval = this.validateManagerApprovalOffline(null, { pin: managerPin, requiredPrivilege: 'void_sent' });
+      if (approval.status !== 200) return approval;
+    }
+
+    const checks = this.db.getAllOfflineChecks ? this.db.getAllOfflineChecks() : [];
+    for (const c of checks) {
+      if (c.items && c.items.some(i => i.id === itemId)) {
+        const item = c.items.find(i => i.id === itemId);
+        if (item) {
+          item.voided = true;
+          item.voidedAt = new Date().toISOString();
+          item.voidReason = body?.reason || 'Offline void';
+          if (!c.voidedItems) c.voidedItems = [];
+          c.voidedItems.push({ ...item });
+        }
+        const activeItems = c.items.filter(i => !i.voided);
+        let subtotal = 0;
+        activeItems.forEach(i => {
+          subtotal += parseFloat(i.totalPrice || i.unitPrice || 0) * (i.quantity || 1);
+        });
+        c.subtotal = subtotal.toFixed(2);
+        let taxTotal = 0;
+        try {
+          const taxRates = this.db.getEntityList('tax_rates', null);
+          if (taxRates && taxRates.length > 0) {
+            const defaultRate = taxRates.find(t => t.isDefault) || taxRates[0];
+            if (defaultRate && defaultRate.rate) {
+              taxTotal = subtotal * (parseFloat(defaultRate.rate) / 100);
+            }
+          }
+        } catch (e) {}
+        c.taxTotal = taxTotal.toFixed(2);
+        const discountTotal = parseFloat(c.discountTotal) || 0;
+        c.total = Math.max(0, subtotal - discountTotal + taxTotal).toFixed(2);
+        c.updatedAt = new Date().toISOString();
+        this.db.saveOfflineCheck(c);
+        break;
+      }
+    }
+    this.db.queueOperation('void_check_item', pathname, 'POST', body, 2);
+    return { status: 200, data: { success: true, offline: true, message: 'Item voided (offline)' } };
+  }
+
+  applyItemDiscountOffline(pathname, body) {
+    const itemIdMatch = pathname.match(/^\/api\/check-items\/([^/]+)\/discount/);
+    if (!itemIdMatch) return null;
+
+    const managerPin = body?.managerPin;
+    if (managerPin) {
+      const approval = this.validateManagerApprovalOffline(null, { pin: managerPin, requiredPrivilege: 'apply_discount' });
+      if (approval.status !== 200) return approval;
+    }
+
+    this.db.queueOperation('item_discount', pathname, 'POST', body, 2);
+    return { status: 200, data: { success: true, offline: true, message: 'Item discount applied (offline - queued for sync)' } };
+  }
+
+  priceOverrideOffline(pathname, body) {
+    const itemIdMatch = pathname.match(/^\/api\/check-items\/([^/]+)\/price-override/);
+    if (!itemIdMatch) return null;
+
+    const managerPin = body?.managerPin;
+    if (managerPin) {
+      const approval = this.validateManagerApprovalOffline(null, { pin: managerPin, requiredPrivilege: 'approve_price_override' });
+      if (approval.status !== 200) return approval;
+    }
+
+    const itemId = itemIdMatch[1];
+    const checks = this.db.getAllOfflineChecks ? this.db.getAllOfflineChecks() : [];
+    for (const c of checks) {
+      if (c.items) {
+        const item = c.items.find(i => i.id === itemId);
+        if (item) {
+          const newPrice = body.newPrice || body.price;
+          if (newPrice !== undefined) {
+            item.unitPrice = parseFloat(newPrice).toFixed(2);
+            item.totalPrice = (parseFloat(newPrice) * (item.quantity || 1)).toFixed(2);
+            item.priceOverride = true;
+          }
+          let subtotal = 0;
+          c.items.forEach(i => {
+            subtotal += parseFloat(i.totalPrice || i.unitPrice || 0) * (i.quantity || 1);
+          });
+          c.subtotal = subtotal.toFixed(2);
+          let taxTotal = 0;
+          try {
+            const taxRates = this.db.getEntityList('tax_rates', null);
+            if (taxRates && taxRates.length > 0) {
+              const defaultRate = taxRates.find(t => t.isDefault) || taxRates[0];
+              if (defaultRate && defaultRate.rate) {
+                taxTotal = subtotal * (parseFloat(defaultRate.rate) / 100);
+              }
+            }
+          } catch (e) {}
+          c.taxTotal = taxTotal.toFixed(2);
+          const discountTotal = parseFloat(c.discountTotal) || 0;
+          c.total = Math.max(0, subtotal - discountTotal + taxTotal).toFixed(2);
+          c.updatedAt = new Date().toISOString();
+          this.db.saveOfflineCheck(c);
+          break;
+        }
+      }
+    }
+    this.db.queueOperation('price_override', pathname, 'POST', body, 2);
+    return { status: 200, data: { success: true, offline: true, message: 'Price override applied (offline)' } };
+  }
+
+  splitCheckOffline(pathname, body) {
+    const checkIdMatch = pathname.match(/^\/api\/checks\/([^/]+)\/split/);
+    if (!checkIdMatch) return null;
+
+    const sourceCheckId = checkIdMatch[1];
+    const sourceCheck = this.db.getOfflineCheck(sourceCheckId);
+    if (!sourceCheck) {
+      return { status: 404, data: { message: 'Check not found (offline)' } };
+    }
+
+    const operations = body?.operations || [];
+    if (operations.length === 0) {
+      return { status: 400, data: { message: 'No split operations provided' } };
+    }
+
+    const newCheckId = `offline_${crypto.randomUUID()}`;
+    const newCheck = {
+      id: newCheckId,
+      rvcId: sourceCheck.rvcId,
+      employeeId: sourceCheck.employeeId,
+      orderType: sourceCheck.orderType,
+      status: 'open',
+      subtotal: '0.00',
+      taxTotal: '0.00',
+      discountTotal: '0.00',
+      total: '0.00',
+      guestCount: sourceCheck.guestCount || 1,
+      tableNumber: sourceCheck.tableNumber,
+      items: [],
+      payments: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isOffline: true,
+      businessDate: sourceCheck.businessDate,
+      originBusinessDate: sourceCheck.originBusinessDate || sourceCheck.businessDate,
+    };
+
+    for (const op of operations) {
+      const itemId = op.itemId || op.checkItemId;
+      const sourceItem = sourceCheck.items?.find(i => i.id === itemId);
+      if (!sourceItem) continue;
+
+      if (op.type === 'move') {
+        sourceCheck.items = sourceCheck.items.filter(i => i.id !== itemId);
+        sourceItem.checkId = newCheckId;
+        newCheck.items.push(sourceItem);
+      } else if (op.type === 'share') {
+        const ratio = parseFloat(op.shareRatio || 0.5);
+        const originalQty = sourceItem.quantity || 1;
+        const originalPrice = parseFloat(sourceItem.unitPrice || 0);
+
+        sourceItem.quantity = Math.max(1, Math.round(originalQty * (1 - ratio)));
+        sourceItem.totalPrice = (sourceItem.quantity * originalPrice).toFixed(2);
+
+        const newItem = {
+          ...sourceItem,
+          id: `offline_item_${crypto.randomUUID()}`,
+          checkId: newCheckId,
+          quantity: Math.max(1, originalQty - sourceItem.quantity),
+        };
+        newItem.totalPrice = (newItem.quantity * originalPrice).toFixed(2);
+        newCheck.items.push(newItem);
+      }
+    }
+
+    this._recalcCheckTotals(sourceCheck);
+    this._recalcCheckTotals(newCheck);
+
+    this.db.saveOfflineCheck(sourceCheck);
+    const created = this.db.createCheckAtomic(newCheck.rvcId, newCheck);
+
+    this.db.queueOperation('split_check', `/api/checks/${sourceCheckId}/split`, 'POST', body, 1);
+
+    return {
+      status: 200,
+      data: {
+        sourceCheck: sourceCheck,
+        newChecks: [created || newCheck],
+        offline: true,
+        message: 'Check split (offline)',
+      },
+    };
+  }
+
+  _recalcCheckTotals(check) {
+    let subtotal = 0;
+    const activeItems = (check.items || []).filter(i => !i.voided);
+    activeItems.forEach(i => {
+      subtotal += parseFloat(i.totalPrice || i.unitPrice || 0) * (i.quantity || 1);
+    });
+    check.subtotal = subtotal.toFixed(2);
+    let taxTotal = 0;
+    try {
+      const taxRates = this.db.getEntityList('tax_rates', null);
+      if (taxRates && taxRates.length > 0) {
+        const defaultRate = taxRates.find(t => t.isDefault) || taxRates[0];
+        if (defaultRate && defaultRate.rate) {
+          taxTotal = subtotal * (parseFloat(defaultRate.rate) / 100);
+        }
+      }
+    } catch (e) {}
+    check.taxTotal = taxTotal.toFixed(2);
+    const discountTotal = parseFloat(check.discountTotal) || 0;
+    check.total = Math.max(0, subtotal - discountTotal + taxTotal).toFixed(2);
+    check.updatedAt = new Date().toISOString();
   }
 
   handleDelete(pathname) {
