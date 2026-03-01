@@ -19,6 +19,7 @@
 import { storage } from "./storage";
 import { hasReachedClosingTime, incrementDate } from "./businessDate";
 import { log } from "./index";
+import { broadcastPosEvent } from "./routes";
 
 /**
  * Process auto clock-out for employees still clocked in.
@@ -188,6 +189,16 @@ async function processPropertyFiscalClose(propertyId: string): Promise<void> {
           "fiscal-scheduler"
         );
       }
+
+      broadcastPosEvent({
+        type: "BUSINESS_DATE_ROLLOVER",
+        payload: {
+          propertyId,
+          closedBusinessDate: freshPeriod.businessDate,
+          newBusinessDate: nextBusinessDate,
+          propertyName: property.name,
+        },
+      });
 
       log(
         `Auto fiscal close: Closed ${freshPeriod.businessDate} for property ${property.name}`,

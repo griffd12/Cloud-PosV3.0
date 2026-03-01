@@ -157,47 +157,88 @@ class Logger {
   }
 }
 
-function rotateLogsForUpgrade(fromVersion, toVersion) {
+const ARCHIVE_DIR = path.join(LOG_DIR, 'archive');
+const ACTIVE_LOG_FILES = ['app.log', 'print-agent.log', 'offline-db.log', 'installer.log', 'updater.log', 'system.log'];
+const MAX_ARCHIVE_DAYS = 14;
+
+function moveLogsToArchive(archiveSubDir, logFiles) {
   ensureLogDir();
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').substring(0, 19);
-  const suffix = `_v${fromVersion}_${timestamp}`;
-  const logFiles = ['app.log', 'print-agent.log', 'offline-db.log', 'installer.log', 'updater.log', 'system.log'];
-  let rotated = 0;
+  const destDir = path.join(ARCHIVE_DIR, archiveSubDir);
+  try {
+    if (!fs.existsSync(destDir)) {
+      fs.mkdirSync(destDir, { recursive: true });
+    }
+  } catch (e) {
+    console.error(`[Logger] Failed to create archive dir ${destDir}: ${e.message}`);
+    return 0;
+  }
+  let moved = 0;
   for (const logFile of logFiles) {
     const src = path.join(LOG_DIR, logFile);
     if (fs.existsSync(src)) {
       try {
         const stats = fs.statSync(src);
         if (stats.size > 0) {
-          const ext = path.extname(logFile);
-          const base = path.basename(logFile, ext);
-          const dest = path.join(LOG_DIR, `${base}${suffix}${ext}`);
+          const dest = path.join(destDir, logFile);
           fs.renameSync(src, dest);
-          rotated++;
+          moved++;
         }
       } catch (e) {
-        console.error(`[Logger] Failed to rotate ${logFile}: ${e.message}`);
+        console.error(`[Logger] Failed to archive ${logFile}: ${e.message}`);
       }
     }
   }
-  const oldArchives = [];
+  return moved;
+}
+
+function cleanupOldArchives() {
   try {
-    const allFiles = fs.readdirSync(LOG_DIR);
-    for (const f of allFiles) {
-      if (f.match(/_v\d+\.\d+\.\d+_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.log$/)) {
-        oldArchives.push({ name: f, mtime: fs.statSync(path.join(LOG_DIR, f)).mtimeMs });
-      }
-    }
-    oldArchives.sort((a, b) => a.mtime - b.mtime);
-    const MAX_ARCHIVED = 30;
-    while (oldArchives.length > MAX_ARCHIVED) {
-      const oldest = oldArchives.shift();
+    if (!fs.existsSync(ARCHIVE_DIR)) return;
+    const entries = fs.readdirSync(ARCHIVE_DIR)
+      .filter(d => d.match(/^\d{4}-\d{2}-\d{2}$/))
+      .sort();
+    while (entries.length > MAX_ARCHIVE_DAYS) {
+      const oldest = entries.shift();
+      const oldDir = path.join(ARCHIVE_DIR, oldest);
       try {
-        fs.unlinkSync(path.join(LOG_DIR, oldest.name));
+        const files = fs.readdirSync(oldDir);
+        for (const f of files) fs.unlinkSync(path.join(oldDir, f));
+        fs.rmdirSync(oldDir);
       } catch {}
     }
   } catch {}
-  return rotated;
+}
+
+function rotateLogsForBusinessDate(closedBusinessDate) {
+  const moved = moveLogsToArchive(closedBusinessDate, ACTIVE_LOG_FILES);
+  cleanupOldArchives();
+  console.log(`[Logger] Business date rotation: archived ${moved} log files to archive/${closedBusinessDate}/`);
+  return moved;
+}
+
+function rotateLogsForUpgrade(fromVersion, toVersion) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').substring(0, 19);
+  const archiveSubDir = path.join('upgrades', `v${fromVersion}_${timestamp}`);
+  const moved = moveLogsToArchive(archiveSubDir, ACTIVE_LOG_FILES);
+  try {
+    if (!fs.existsSync(ARCHIVE_DIR)) return moved;
+    const upgradesDir = path.join(ARCHIVE_DIR, 'upgrades');
+    if (!fs.existsSync(upgradesDir)) return moved;
+    const upgradeDirs = fs.readdirSync(upgradesDir)
+      .map(d => ({ name: d, mtime: fs.statSync(path.join(upgradesDir, d)).mtimeMs }))
+      .sort((a, b) => a.mtime - b.mtime);
+    const MAX_UPGRADE_ARCHIVES = 10;
+    while (upgradeDirs.length > MAX_UPGRADE_ARCHIVES) {
+      const oldest = upgradeDirs.shift();
+      const oldDir = path.join(upgradesDir, oldest.name);
+      try {
+        const files = fs.readdirSync(oldDir);
+        for (const f of files) fs.unlinkSync(path.join(oldDir, f));
+        fs.rmdirSync(oldDir);
+      } catch {}
+    }
+  } catch {}
+  return moved;
 }
 
 const VERSION_MARKER_FILE = path.join(LOG_DIR, '.last-version');
@@ -235,5 +276,6 @@ module.exports = {
   LOG_DIR,
   UNIFIED_LOG_FILE,
   rotateLogsForUpgrade,
+  rotateLogsForBusinessDate,
   checkVersionAndRotate,
 };

@@ -82,6 +82,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getOfflineMode: () => ipcRenderer.invoke('get-offline-mode'),
   offlineSelfTest: () => ipcRenderer.invoke('offline-self-test'),
 
+  rotateLogsForBusinessDate: (businessDate) => ipcRenderer.invoke('rotate-logs-business-date', businessDate),
+
   // === Logging API ===
   openLogDirectory: () => ipcRenderer.invoke('open-log-directory'),
   getLogContent: (logName, lines) => ipcRenderer.invoke('get-log-content', { logName, lines }),
