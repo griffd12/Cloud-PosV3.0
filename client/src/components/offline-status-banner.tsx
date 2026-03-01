@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { WifiOff } from "lucide-react";
-import { getIsOfflineMode, onOfflineModeChange, setOfflineModeExternal } from "@/lib/queryClient";
+import { getIsOfflineMode, onOfflineModeChange, setOfflineModeExternal, setElectronOfflineLock } from "@/lib/queryClient";
 
 export function OfflineStatusBanner() {
   const [isOffline, setIsOffline] = useState(getIsOfflineMode());
@@ -14,7 +14,12 @@ export function OfflineStatusBanner() {
     const w = window as any;
     if (w.electronAPI?.onOnlineStatus) {
       const unsub = w.electronAPI.onOnlineStatus((online: boolean) => {
-        setOfflineModeExternal(!online);
+        if (!online) {
+          setElectronOfflineLock(true);
+        } else {
+          setElectronOfflineLock(false);
+          setOfflineModeExternal(false);
+        }
       });
       return unsub;
     }
@@ -25,7 +30,7 @@ export function OfflineStatusBanner() {
     if (w.electronAPI?.getOnlineStatus) {
       w.electronAPI.getOnlineStatus().then((online: boolean) => {
         if (!online) {
-          setOfflineModeExternal(true);
+          setElectronOfflineLock(true);
         }
       }).catch(() => {});
     }
