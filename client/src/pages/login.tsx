@@ -22,7 +22,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useFullscreen } from "@/hooks/use-fullscreen";
 import { useDeviceReload } from "@/hooks/use-device-reload";
 import { useDeviceHeartbeat } from "@/hooks/use-device-heartbeat";
-import { Building2, Delete, LogIn, Clock, CheckCircle2, LogOut, XCircle, Monitor, Maximize, Minimize, Settings, Activity } from "lucide-react";
+import { Building2, Delete, LogIn, Clock, CheckCircle2, LogOut, XCircle, Monitor, Maximize, Minimize, Settings, Activity, ChevronDown, MapPin } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -108,6 +108,7 @@ export default function LoginPage() {
   const [clockStep, setClockStep] = useState<"pin" | "job_select" | "status" | "clock_out_type" | "break_type">("pin");
   const [showAttestationDialog, setShowAttestationDialog] = useState(false);
   const [pendingAttestationData, setPendingAttestationData] = useState<any>(null);
+  const [showRvcSwitcher, setShowRvcSwitcher] = useState(false);
 
   // Fetch workstation context (includes property and allowed RVCs) if workstation is set
   const { data: wsContext, isLoading: wsContextLoading, error: wsContextError } = useQuery<WorkstationContext>({
@@ -750,22 +751,65 @@ export default function LoginPage() {
               )}
             </div>
 
-            {/* Show location info (read-only, device-locked) */}
+            {/* Revenue Center selector */}
             {selectedRvc && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-medium flex items-center gap-2">
-                    <Building2 className="w-4 h-4" />
-                    Location
+                    <MapPin className="w-4 h-4" />
+                    Revenue Center
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
-                    <div className="flex-1">
-                      <div className="font-medium" data-testid="text-rvc-name">{selectedRvc.name}</div>
-                      <div className="text-xs text-muted-foreground">Device locked to this location</div>
+                  {rvcs.length > 1 ? (
+                    <div>
+                      <button
+                        type="button"
+                        className="w-full flex items-center gap-2 p-2 bg-muted/50 hover:bg-muted rounded-md transition-colors cursor-pointer"
+                        onClick={() => setShowRvcSwitcher(!showRvcSwitcher)}
+                        data-testid="button-rvc-switcher"
+                      >
+                        <div className="flex-1 text-left">
+                          <div className="font-medium" data-testid="text-rvc-name">{selectedRvc.name}</div>
+                          <div className="text-xs text-muted-foreground">Tap to switch revenue center</div>
+                        </div>
+                        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showRvcSwitcher ? 'rotate-180' : ''}`} />
+                      </button>
+                      {showRvcSwitcher && (
+                        <div className="mt-2 space-y-1 border rounded-md p-2 bg-background" data-testid="rvc-switcher-list">
+                          {rvcs.map((rvc) => (
+                            <button
+                              key={rvc.id}
+                              type="button"
+                              className={`w-full flex items-center gap-2 p-2 rounded-md text-left transition-colors ${
+                                rvc.id === selectedRvcId
+                                  ? 'bg-primary/10 text-primary font-medium'
+                                  : 'hover:bg-muted'
+                              }`}
+                              onClick={() => {
+                                setSelectedRvcId(rvc.id);
+                                setShowRvcSwitcher(false);
+                              }}
+                              data-testid={`button-rvc-option-${rvc.id}`}
+                            >
+                              <MapPin className="w-4 h-4 flex-shrink-0" />
+                              <span>{rvc.name}</span>
+                              {rvc.id === selectedRvcId && (
+                                <CheckCircle2 className="w-4 h-4 ml-auto text-primary" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+                      <div className="flex-1">
+                        <div className="font-medium" data-testid="text-rvc-name">{selectedRvc.name}</div>
+                        <div className="text-xs text-muted-foreground">Default revenue center</div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
