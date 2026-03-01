@@ -1,0 +1,116 @@
+[2026-03-01T09:47:31.628Z] [INFO] [Status] Mode: GREEN | Cloud: connected | Device: SNS-001-WS01 | Uptime: 3m | Pending sync: 0
+[2026-03-01T09:47:35.223Z] [INFO] [App] Application shutting down
+[2026-03-01T09:47:35.224Z] [INFO] [ServiceHost] Stopping service host process
+
+================================================================================
+  APPLICATION STARTUP - 2026-03-01T09:47:47.261Z
+================================================================================
+[2026-03-01T09:47:47.262Z] [INFO] [App] Cloud POS starting | DATA: {"version":"3.1.13","mode":"pos","kiosk":false,"platform":"win32"}
+[2026-03-01T09:47:47.264Z] [INFO] [App] Directories | DATA: {"config":"C:\\Users\\SNS-001\\AppData\\Local\\Cloud POS\\config","data":"C:\\Users\\SNS-001\\AppData\\Local\\Cloud POS\\data","logs":"C:\\Users\\SNS-001\\AppData\\Local\\Cloud POS\\logs"}
+[2026-03-01T09:47:47.267Z] [INFO] [App] Setup previously completed, initializing all services
+[2026-03-01T09:47:47.269Z] [INFO] [AutoStartup] Registered "Cloud POS" for auto-startup on boot | DATA: {"exePath":"C:\\Program Files\\Cloud POS\\Cloud POS\\Cloud POS.exe","mode":"pos"}
+[2026-03-01T09:47:47.269Z] [WARN] [AutoStartup] Upgrade migration: auto-startup registration could not be confirmed, will retry on next launch
+[2026-03-01T09:47:47.271Z] [INFO] [App] Initializing services after setup verification
+[2026-03-01T09:47:47.271Z] [INFO] [CAPS] Loaded cached CAPS config | DATA: {"serviceHostUrl":"http://127.0.0.1:3001","isCaps":true}
+[2026-03-01T09:47:47.288Z] [INFO] [OfflineDB] SQLite database initialized | DATA: {"path":"C:\\Users\\SNS-001\\AppData\\Local\\Cloud POS\\data\\offline.db"}
+[2026-03-01T09:47:47.307Z] [INFO] [OfflineDB] Enhanced offline database initialized
+[2026-03-01T09:47:47.352Z] [INFO] [Connectivity] Check interval set to 30s (mode: green)
+[2026-03-01T09:47:47.573Z] [INFO] [OfflineDB] Cloud reachable, starting initial data sync
+[2026-03-01T09:47:49.746Z] [INFO] [OfflineDB] Initial sync completed | DATA: {"tables":34,"errors":0}
+[2026-03-01T09:47:49.964Z] [INFO] [Interceptor] Service host URL set: http://127.0.0.1:3001
+[2026-03-01T09:47:49.964Z] [INFO] [CAPS] Activation config fetched | DATA: {"serviceHostUrl":"http://127.0.0.1:3001","capsWorkstationId":"32fb06f3-837f-42ed-a6f5-90436ca62e06","capsWorkstationName":"SNS-001-WS01","isCaps":true}
+[2026-03-01T09:47:49.974Z] [INFO] [ServiceHost] Starting embedded service host (CAPS mode) | DATA: {"dataDir":"C:\\Users\\SNS-001\\AppData\\Local\\Cloud POS\\data\\service-host","port":3001,"cloudUrl":"https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev"}
+[2026-03-01T09:47:50.593Z] [INFO] [ServiceHost] ============================================================
+[2026-03-01T09:47:50.594Z] [INFO] [ServiceHost] Cloud POS Service Host v1.0.0
+============================================================
+Cloud URL: https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev
+Service Host ID: 0efc311c-4b87-4f4d-a9c8-22b7ae1fc0cd
+Property ID: b0c038b1-5c55-4c63-85fe-5ea9dc64a767
+Data Directory: C:\Users\SNS-001\AppData\Local\Cloud POS\data\service-host
+CAL Root Directory: C:\OPS-POS
+
+[DB] Database already initialized in constructor
+Database initialized
+[2026-03-01T09:47:50.808Z] [INFO] [ServiceHost] WebSocket connected to cloud
+[2026-03-01T09:47:50.850Z] [INFO] [ServiceHost] Authenticated with cloud
+Connected to cloud
+Starting full configuration sync for property b0c038b1-5c55-4c63-85fe-5ea9dc64a767...
+[2026-03-01T09:47:51.087Z] [WARN] [ServiceHost] Full sync failed: Cloud API error: 500 Internal Server Error
+[2026-03-01T09:47:51.088Z] [INFO] [ServiceHost] Configuration synced from cloud
+[CAL] Starting CAL sync service
+[CAL] Root directory: C:\OPS-POS
+[2026-03-01T09:47:51.272Z] [INFO] [ServiceHost] [CAL] Found 7 pending deployment(s)
+[CAL] Queued deployment: Service Host Prerequisites vundefined
+[2026-03-01T09:47:51.273Z] [INFO] [ServiceHost] [CAL] Processing deployment: Service Host Prerequisites vundefined
+[CAL] Status update: downloading - Starting download...
+[2026-03-01T09:47:51.274Z] [INFO] [ServiceHost] [CAL] Queued deployment: CAPS Service vundefined
+[CAL] Queued deployment: Print Controller vundefined
+[CAL] Queued deployment: KDS Controller vundefined
+[CAL] Queued deployment: Payment Controller vundefined
+[CAL] Queued deployment: CAL Client vundefined
+[CAL] Queued deployment: Service Host Runtime vundefined
+[2026-03-01T09:47:51.275Z] [INFO] [ServiceHost] CAL deployment sync started
+[2026-03-01T09:47:51.276Z] [INFO] [ServiceHost] [36m[2026-03-01T09:47:51.267Z] [INFO] [ServiceHost:TransactionSync][0m Starting transaction sync worker... {"interval":5000}
+[2026-03-01T09:47:51.277Z] [INFO] [ServiceHost] CAPS device tracker started
+[2026-03-01T09:47:51.283Z] [INFO] [ServiceHost] Service Host listening on http://0.0.0.0:3001
+
+Available endpoints:
+  GET  /health              - Health check
+  POST /api/caps/checks     - Create check
+  GET  /api/caps/checks     - List open checks
+  POST /api/caps/checks/:id/items - Add items
+  POST /api/caps/checks/:id/send  - Send to kitchen
+  POST /api/caps/checks/:id/pay   - Process payment
+[2026-03-01T09:47:51.284Z] [INFO] [ServiceHost] POST /api/print/jobs      - Submit print job
+  GET  /api/kds/tickets     - Get KDS tickets
+  POST /api/payment/authorize - Authorize payment
+  GET  /api/caps/connected-devices - CAPS device tracker
+  WS   /ws                  - Real-time updates
+[2026-03-01T09:47:51.327Z] [INFO] [ServiceHost] [CAL] Status update: installing - Registering package...
+[2026-03-01T09:47:51.375Z] [INFO] [ServiceHost] [CAL] Installed: Service Host Prerequisites vundefined
+[CAL] Status update: completed - Installation successful
+[2026-03-01T09:47:51.424Z] [INFO] [ServiceHost] [CAL] Deployment completed: Service Host Prerequisites vundefined
+[CAL] Processing deployment: CAPS Service vundefined
+[CAL] Status update: downloading - Starting download...
+[2026-03-01T09:47:51.471Z] [INFO] [ServiceHost] [CAL] Status update: installing - Registering package...
+[2026-03-01T09:47:51.519Z] [INFO] [ServiceHost] [CAL] Installed: CAPS Service vundefined
+[CAL] Status update: completed - Installation successful
+[2026-03-01T09:47:51.563Z] [INFO] [ServiceHost] [CAL] Deployment completed: CAPS Service vundefined
+[CAL] Processing deployment: Print Controller vundefined
+[CAL] Status update: downloading - Starting download...
+[2026-03-01T09:47:51.616Z] [INFO] [ServiceHost] [CAL] Status update: installing - Registering package...
+[2026-03-01T09:47:51.674Z] [INFO] [ServiceHost] [CAL] Installed: Print Controller vundefined
+[CAL] Status update: completed - Installation successful
+[2026-03-01T09:47:51.723Z] [INFO] [ServiceHost] [CAL] Deployment completed: Print Controller vundefined
+[CAL] Processing deployment: KDS Controller vundefined
+[CAL] Status update: downloading - Starting download...
+[2026-03-01T09:47:51.765Z] [INFO] [ServiceHost] Service host is ready on port 3001 (CAPS mode)
+[2026-03-01T09:47:51.768Z] [INFO] [App] All services initialized successfully
+[2026-03-01T09:47:51.774Z] [INFO] [Interceptor] HTTPS protocol interceptor registered for offline support
+[2026-03-01T09:47:51.813Z] [INFO] [Window] Launching POS mode | DATA: {"kiosk":false,"maximized":true}
+[2026-03-01T09:47:51.813Z] [INFO] [Window] Loading URL: https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev/
+[2026-03-01T09:47:51.835Z] [INFO] [ServiceHost] [CAL] Status update: installing - Registering package...
+[CAL] Installed: KDS Controller vundefined
+[CAL] Status update: completed - Installation successful
+[2026-03-01T09:47:51.873Z] [INFO] [ServiceHost] [CAL] Deployment completed: KDS Controller vundefined
+[CAL] Processing deployment: Payment Controller vundefined
+[2026-03-01T09:47:51.875Z] [INFO] [ServiceHost] [CAL] Status update: downloading - Starting download...
+[2026-03-01T09:47:51.923Z] [INFO] [ServiceHost] [CAL] Status update: installing - Registering package...
+[2026-03-01T09:47:51.973Z] [INFO] [ServiceHost] [CAL] Installed: Payment Controller vundefined
+[CAL] Status update: completed - Installation successful
+[2026-03-01T09:47:52.038Z] [INFO] [ServiceHost] [CAL] Deployment completed: Payment Controller vundefined
+[CAL] Processing deployment: CAL Client vundefined
+[CAL] Status update: downloading - Starting download...
+[2026-03-01T09:47:52.085Z] [INFO] [ServiceHost] [CAL] Status update: installing - Registering package...
+[2026-03-01T09:47:52.133Z] [INFO] [ServiceHost] [CAL] Installed: CAL Client vundefined
+[CAL] Status update: completed - Installation successful
+[2026-03-01T09:47:52.152Z] [INFO] [Window] Loading screen shown, navigating to server...
+[2026-03-01T09:47:52.181Z] [INFO] [ServiceHost] [CAL] Deployment completed: CAL Client vundefined
+[CAL] Processing deployment: Service Host Runtime vundefined
+[CAL] Status update: downloading - Starting download...
+[2026-03-01T09:47:52.228Z] [INFO] [ServiceHost] [CAL] Status update: installing - Registering package...
+[2026-03-01T09:47:52.279Z] [INFO] [ServiceHost] [CAL] Installed: Service Host Runtime vundefined
+[CAL] Status update: completed - Installation successful
+[2026-03-01T09:47:52.325Z] [INFO] [ServiceHost] [CAL] Deployment completed: Service Host Runtime vundefined
+[CAL] Worker finished, queue empty
+[2026-03-01T09:47:56.226Z] [INFO] [Window] Page loaded successfully: https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev/
