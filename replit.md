@@ -44,6 +44,7 @@ Preferred communication style: Simple, everyday language.
 - **Offline Mode Resilience**: Features protocol interceptors, cached HTML/JS/CSS, and robust handling of offline transactions and manager approvals. CAPS auto-discovery and Yellow Mode provide seamless failover, while an immutable transaction journal ensures data integrity during synchronization.
 - **Workstation Identity and RVC Switching**: Workstation ID is locked after setup, and the login screen allows interactive Revenue Center selection.
 - **Device Tracker**: Unified device tracking for both WS and KDS Electron devices. KDS devices automatically tracked via ticket polling (kdsDeviceId fallback), WS devices tracked from login screen heartbeat. DeviceTracker summary shows device type (WS/KDS) and connection mode. Throttled DB writes (30s) to avoid excessive updates from 2s KDS polling.
+- **CAPS Service Host Resilience**: Service host SQLite schema creation uses `ensureCriticalTables()` fallback to individually create essential tables (schema_version, sync_metadata, config_cache, sync_queue) if the main schema exec partially fails. Missing token triggers exit code 2 with patient 60-second retry instead of 5-second crash loop. Token is fetched fresh from cloud on each startup if missing from local config.
 
 ## External Dependencies
 
