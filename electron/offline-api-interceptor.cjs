@@ -454,14 +454,6 @@ class OfflineApiInterceptor {
       return { status: 200, data: [] };
     }
 
-    if (pathname.match(/^\/api\/checks\/[^/]+\/payments/)) {
-      const payCheckMatch = pathname.match(/^\/api\/checks\/([^/]+)\/payments/);
-      if (payCheckMatch) {
-        const check = this.db.getOfflineCheck(payCheckMatch[1]);
-        return { status: 200, data: (check && check.payments) || [] };
-      }
-    }
-
     if (pathname === '/api/client-ip') {
       return { status: 200, data: { ip: '127.0.0.1', offline: true } };
     }
