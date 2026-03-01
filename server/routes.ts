@@ -175,7 +175,7 @@ interface PosEvent {
   payload?: Record<string, unknown>;
 }
 
-function broadcastPosEvent(event: PosEvent, channel?: string) {
+export function broadcastPosEvent(event: PosEvent, channel?: string) {
   const targetChannel = channel || "all";
   const channelClients = clients.get(targetChannel);
   if (channelClients) {

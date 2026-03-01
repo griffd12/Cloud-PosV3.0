@@ -23,6 +23,9 @@ interface PosEvent {
     message?: string;
     source?: string;
     timestamp?: string;
+    closedBusinessDate?: string;
+    newBusinessDate?: string;
+    propertyName?: string;
   };
 }
 
@@ -333,6 +336,22 @@ function handlePosEvent(event: PosEvent) {
     case "kds_test_ticket":
       // Notify all listeners about test ticket
       kdsTestTicketListeners.forEach(listener => listener(event.payload));
+      break;
+
+    case "BUSINESS_DATE_ROLLOVER":
+      console.log("[WebSocket] Business date rollover:", event.payload);
+      if ((window as any).electronAPI?.rotateLogsForBusinessDate && event.payload?.closedBusinessDate) {
+        (window as any).electronAPI.rotateLogsForBusinessDate(event.payload.closedBusinessDate as string);
+      }
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = getKeyString(query.queryKey[0]);
+          return key.includes("/api/fiscal") ||
+            key.includes("/api/properties") ||
+            key.includes("/api/reports") ||
+            key.includes("/api/sales-summary");
+        }
+      });
       break;
 
     case "device_reload":
