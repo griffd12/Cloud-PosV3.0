@@ -7,7 +7,7 @@ const { EMVTerminalManager } = require('./emv-terminal.cjs');
 const { PrintAgentService } = require('./print-agent-service.cjs');
 const { OfflineDatabase } = require('./offline-database.cjs');
 const { OfflineApiInterceptor } = require('./offline-api-interceptor.cjs');
-const { appLogger, printLogger, updaterLogger, LOG_DIR } = require('./logger.cjs');
+const { appLogger, printLogger, updaterLogger, LOG_DIR, checkVersionAndRotate } = require('./logger.cjs');
 const { initAutoUpdater, getUpdateState } = require('./auto-updater.cjs');
 
 const { fork } = require('child_process');
@@ -2670,6 +2670,7 @@ if (!gotTheLock) {
 app.whenReady().then(async () => {
   ensureDirectories();
   parseArgs();
+  checkVersionAndRotate(app.getVersion());
   appLogger.separator('APPLICATION STARTUP');
   appLogger.info('App', 'Cloud POS starting', { version: app.getVersion(), mode: appMode, kiosk: isKiosk, platform: process.platform });
   appLogger.info('App', 'Directories', { config: CONFIG_DIR, data: DATA_DIR, logs: LOG_DIR });

@@ -8,6 +8,7 @@ try {
 const { app, ipcMain, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { rotateLogsForUpgrade } = require('./logger.cjs');
 
 function loadGhToken() {
   try {
@@ -143,7 +144,7 @@ function initAutoUpdater(updaterLogger) {
 
   setInterval(() => {
     checkForUpdates();
-  }, 4 * 60 * 60 * 1000);
+  }, 30 * 60 * 1000);
 }
 
 function checkForUpdates() {
@@ -173,6 +174,13 @@ function installUpdate() {
   if (!updateState.updateReady) {
     logger.warn('Install', 'No update ready to install');
     return false;
+  }
+  logger.info('Install', `Rotating logs before upgrade (v${updateState.currentVersion} → v${updateState.availableVersion})...`);
+  try {
+    const count = rotateLogsForUpgrade(updateState.currentVersion, updateState.availableVersion);
+    logger.info('Install', `Rotated ${count} log files`);
+  } catch (e) {
+    logger.warn('Install', `Log rotation failed: ${e.message}`);
   }
   logger.info('Install', 'Installing update and restarting application...');
   autoUpdater.quitAndInstall(false, true);

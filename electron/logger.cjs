@@ -157,6 +157,68 @@ class Logger {
   }
 }
 
+function rotateLogsForUpgrade(fromVersion, toVersion) {
+  ensureLogDir();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').substring(0, 19);
+  const suffix = `_v${fromVersion}_${timestamp}`;
+  const logFiles = ['app.log', 'print-agent.log', 'offline-db.log', 'installer.log', 'updater.log', 'system.log'];
+  let rotated = 0;
+  for (const logFile of logFiles) {
+    const src = path.join(LOG_DIR, logFile);
+    if (fs.existsSync(src)) {
+      try {
+        const stats = fs.statSync(src);
+        if (stats.size > 0) {
+          const ext = path.extname(logFile);
+          const base = path.basename(logFile, ext);
+          const dest = path.join(LOG_DIR, `${base}${suffix}${ext}`);
+          fs.renameSync(src, dest);
+          rotated++;
+        }
+      } catch (e) {
+        console.error(`[Logger] Failed to rotate ${logFile}: ${e.message}`);
+      }
+    }
+  }
+  const oldArchives = [];
+  try {
+    const allFiles = fs.readdirSync(LOG_DIR);
+    for (const f of allFiles) {
+      if (f.match(/_v\d+\.\d+\.\d+_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.log$/)) {
+        oldArchives.push({ name: f, mtime: fs.statSync(path.join(LOG_DIR, f)).mtimeMs });
+      }
+    }
+    oldArchives.sort((a, b) => a.mtime - b.mtime);
+    const MAX_ARCHIVED = 30;
+    while (oldArchives.length > MAX_ARCHIVED) {
+      const oldest = oldArchives.shift();
+      try {
+        fs.unlinkSync(path.join(LOG_DIR, oldest.name));
+      } catch {}
+    }
+  } catch {}
+  return rotated;
+}
+
+const VERSION_MARKER_FILE = path.join(LOG_DIR, '.last-version');
+
+function checkVersionAndRotate(currentVersion) {
+  ensureLogDir();
+  let lastVersion = null;
+  try {
+    if (fs.existsSync(VERSION_MARKER_FILE)) {
+      lastVersion = fs.readFileSync(VERSION_MARKER_FILE, 'utf8').trim();
+    }
+  } catch {}
+  if (lastVersion && lastVersion !== currentVersion) {
+    const count = rotateLogsForUpgrade(lastVersion, currentVersion);
+    console.log(`[Logger] Version change detected (${lastVersion} → ${currentVersion}): rotated ${count} log files`);
+  }
+  try {
+    fs.writeFileSync(VERSION_MARKER_FILE, currentVersion, 'utf8');
+  } catch {}
+}
+
 const appLogger = new Logger('app');
 const printLogger = new Logger('print-agent');
 const offlineDbLogger = new Logger('offline-db');
@@ -172,4 +234,6 @@ module.exports = {
   updaterLogger,
   LOG_DIR,
   UNIFIED_LOG_FILE,
+  rotateLogsForUpgrade,
+  checkVersionAndRotate,
 };
