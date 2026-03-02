@@ -553,9 +553,12 @@ class OfflineDatabase {
       { table: 'offline_checks', column: 'synced', type: 'INTEGER DEFAULT 0' },
       { table: 'offline_checks', column: 'synced_at', type: 'TEXT' },
       { table: 'offline_checks', column: 'cloud_id', type: 'TEXT' },
+      { table: 'offline_checks', column: 'data', type: 'TEXT' },
+      { table: 'offline_check_items', column: 'data', type: 'TEXT' },
       { table: 'offline_queue', column: 'priority', type: 'INTEGER DEFAULT 5' },
       { table: 'offline_queue', column: 'retry_count', type: 'INTEGER DEFAULT 0' },
       { table: 'offline_queue', column: 'error', type: 'TEXT' },
+      { table: 'offline_payments', column: 'data', type: 'TEXT' },
       { table: 'offline_payments', column: 'tender_id', type: 'TEXT' },
       { table: 'offline_payments', column: 'tender_name', type: 'TEXT' },
       { table: 'offline_payments', column: 'amount', type: 'TEXT' },
@@ -822,6 +825,7 @@ class OfflineDatabase {
             }
             results.synced.push({ key: 'open_checks', count: openChecks.length });
             offlineDbLogger.info('Sync', `Synced ${openChecks.length} open checks for offline access`);
+            this.updateCheckCountersAfterSync();
           }
         }
       } catch (e) {
@@ -1089,6 +1093,31 @@ class OfflineDatabase {
     }
   }
 
+  updateCheckCountersAfterSync() {
+    try {
+      if (!this.usingSqlite) return;
+      const rvcRows = this.db.prepare(
+        'SELECT DISTINCT rvc_id, MAX(check_number) as maxNum FROM offline_checks WHERE rvc_id IS NOT NULL GROUP BY rvc_id'
+      ).all();
+      for (const row of rvcRows) {
+        if (!row.rvc_id || !row.maxNum) continue;
+        const needed = row.maxNum + 1;
+        const existing = this.db.prepare('SELECT next_check_number FROM rvc_counters WHERE rvc_id = ?').get(row.rvc_id);
+        if (existing) {
+          if (existing.next_check_number < needed) {
+            this.db.prepare('UPDATE rvc_counters SET next_check_number = ?, updated_at = datetime(\'now\') WHERE rvc_id = ?').run(needed, row.rvc_id);
+            offlineDbLogger.info('Sync', `Updated rvc_counters for ${row.rvc_id}: ${existing.next_check_number} -> ${needed}`);
+          }
+        } else {
+          this.db.prepare('INSERT INTO rvc_counters (rvc_id, next_check_number, updated_at) VALUES (?, ?, datetime(\'now\'))').run(row.rvc_id, needed);
+          offlineDbLogger.info('Sync', `Initialized rvc_counters for ${row.rvc_id} at ${needed}`);
+        }
+      }
+    } catch (e) {
+      offlineDbLogger.warn('Sync', `updateCheckCountersAfterSync error: ${e.message}`);
+    }
+  }
+
   getNextCheckNumber(rvcId) {
     try {
       if (this.usingSqlite) {
@@ -1126,46 +1155,54 @@ class OfflineDatabase {
   }
 
   createCheckAtomic(rvcId, checkData) {
-    try {
-      if (this.usingSqlite) {
-        return this.db.transaction(() => {
-          const existing = this.db.prepare(
-            'SELECT next_check_number FROM rvc_counters WHERE rvc_id = ?'
-          ).get(rvcId);
-          
-          let checkNumber;
-          if (existing) {
-            checkNumber = existing.next_check_number;
-            this.db.prepare(
-              'UPDATE rvc_counters SET next_check_number = next_check_number + 1, updated_at = datetime(\'now\') WHERE rvc_id = ?'
-            ).run(rvcId);
-          } else {
-            const row = this.db.prepare(
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (this.usingSqlite) {
+          return this.db.transaction(() => {
+            const maxRow = this.db.prepare(
               'SELECT MAX(check_number) as maxNum FROM offline_checks WHERE rvc_id = ?'
             ).get(rvcId);
-            const cloudMax = this.getCachedConfig(`last_check_number_${rvcId}`) || 0;
-            const localMax = row?.maxNum || 0;
-            checkNumber = Math.max(cloudMax, localMax) + 1;
-            this.db.prepare(
-              'INSERT INTO rvc_counters (rvc_id, next_check_number, updated_at) VALUES (?, ?, datetime(\'now\'))'
-            ).run(rvcId, checkNumber + 1);
-          }
-          
-          const check = { ...checkData, checkNumber, rvcId };
-          const id = check.id || `offline_${require('crypto').randomUUID()}`;
-          this.db.prepare(`
-            INSERT INTO offline_checks (id, check_number, rvc_id, employee_id, order_type, status, data, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-          `).run(id, checkNumber, rvcId, check.employeeId, check.orderType || 'dine_in', check.status || 'open', JSON.stringify(check));
-          
-          return { ...check, id, checkNumber };
-        })();
+            const tableMax = maxRow?.maxNum || 0;
+
+            const existing = this.db.prepare(
+              'SELECT next_check_number FROM rvc_counters WHERE rvc_id = ?'
+            ).get(rvcId);
+
+            let checkNumber;
+            if (existing) {
+              checkNumber = Math.max(existing.next_check_number, tableMax + 1);
+              this.db.prepare(
+                'UPDATE rvc_counters SET next_check_number = ?, updated_at = datetime(\'now\') WHERE rvc_id = ?'
+              ).run(checkNumber + 1, rvcId);
+            } else {
+              const cloudMax = this.getCachedConfig(`last_check_number_${rvcId}`) || 0;
+              checkNumber = Math.max(cloudMax, tableMax) + 1;
+              this.db.prepare(
+                'INSERT INTO rvc_counters (rvc_id, next_check_number, updated_at) VALUES (?, ?, datetime(\'now\'))'
+              ).run(rvcId, checkNumber + 1);
+            }
+
+            const check = { ...checkData, checkNumber, rvcId };
+            const id = check.id || `offline_${require('crypto').randomUUID()}`;
+            this.db.prepare(`
+              INSERT INTO offline_checks (id, check_number, rvc_id, employee_id, order_type, status, data, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+            `).run(id, checkNumber, rvcId, check.employeeId, check.orderType || 'dine_in', check.status || 'open', JSON.stringify(check));
+
+            return { ...check, id, checkNumber };
+          })();
+        }
+        return null;
+      } catch (e) {
+        if (e.message && e.message.includes('UNIQUE constraint failed') && attempt < 2) {
+          offlineDbLogger.warn('Check', `Check number collision on attempt ${attempt + 1}, retrying...`);
+          continue;
+        }
+        offlineDbLogger.error('Check', 'createCheckAtomic error', e.message);
+        return null;
       }
-      return null;
-    } catch (e) {
-      offlineDbLogger.error('Check', 'createCheckAtomic error', e.message);
-      return null;
     }
+    return null;
   }
 
   acquireIdempotencyLock(enterpriseId, workstationId, operation, key, requestHash) {

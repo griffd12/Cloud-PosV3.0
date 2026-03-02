@@ -24346,7 +24346,7 @@ connect();
           enterprise,
           property,
           revenueCenters,
-          employees: employees.map(e => ({ ...e, pinHash: undefined })), // Don't send pin hashes
+          employees, // Include pinHash for service host offline auth
           roles,
           menuItems,
           modifierGroups,
