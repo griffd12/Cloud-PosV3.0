@@ -17050,9 +17050,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const txData = shTx[0].data as any;
           const checkNumber = txData.checkNumber || txData.check_number;
           const rvcId = txData.rvcId || txData.rvc_id;
+          const businessDate = txData.businessDate || txData.business_date;
           if (checkNumber && rvcId) {
+            const conditions = [eq(checks.checkNumber, checkNumber), eq(checks.rvcId, rvcId)];
+            if (businessDate) {
+              conditions.push(eq(checks.businessDate, businessDate));
+            }
             const cloudCheck = await db.select().from(checks)
-              .where(and(eq(checks.checkNumber, checkNumber), eq(checks.rvcId, rvcId)))
+              .where(and(...conditions))
               .orderBy(desc(checks.createdAt))
               .limit(1);
             if (cloudCheck.length > 0) {
