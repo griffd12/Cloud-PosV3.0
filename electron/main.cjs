@@ -2649,11 +2649,16 @@ function registerProtocolInterceptor() {
           return electronNet.fetch(cloudFallbackClone, { bypassCustomProtocolHandlers: true });
         }
       }
-      if (!interceptorHandled && connectionMode !== 'green') {
-        appLogger.warn('Interceptor', `OFFLINE-QUEUE: ${request.method} ${url.pathname}, queuing for sync [mode=${connectionMode}]`);
-        if (enhancedOfflineDb && enhancedOfflineDb.queueOperation) {
-          enhancedOfflineDb.queueOperation('unhandled_write', url.pathname, request.method, body || {}, 3);
-          broadcastSyncStatus();
+      if (!interceptorHandled) {
+        if (connectionMode === 'green') {
+          appLogger.info('Interceptor', `GREEN-FALLTHROUGH: ${request.method} ${url.pathname} -> cloud (not handled offline)`);
+          return electronNet.fetch(cloudFallbackClone, { bypassCustomProtocolHandlers: true });
+        } else {
+          appLogger.warn('Interceptor', `OFFLINE-QUEUE: ${request.method} ${url.pathname}, queuing for sync [mode=${connectionMode}]`);
+          if (enhancedOfflineDb && enhancedOfflineDb.queueOperation) {
+            enhancedOfflineDb.queueOperation('unhandled_write', url.pathname, request.method, body || {}, 3);
+            broadcastSyncStatus();
+          }
         }
       }
     }
