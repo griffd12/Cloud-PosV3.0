@@ -548,6 +548,84 @@ class OfflineApiInterceptor {
       return { status: 404, data: { message: 'KDS ticket not found (offline)' } };
     }
 
+    if (pathname === '/api/checks/orders') {
+      const rvcId = query?.rvcId;
+      const statusFilter = query?.statusFilter || 'active';
+      const orderType = query?.orderType;
+      const allChecks = this.db.getOfflineChecks(rvcId, null);
+      const employees = this.db.getEntityList ? this.db.getEntityList('employees', this.config.enterpriseId) : [];
+      const filtered = allChecks.filter(c => {
+        if (statusFilter === 'active') {
+          if (c.status !== 'open' && c.status !== 'voided') return false;
+        } else if (statusFilter === 'completed') {
+          if (c.status !== 'closed') return false;
+        }
+        if (orderType && orderType !== 'all' && c.orderType !== orderType) return false;
+        return true;
+      });
+      const orderChecks = filtered.map(c => {
+        const emp = employees.find(e => e.id === c.employeeId);
+        const items = c.items || [];
+        const activeItems = items.filter(i => !i.voided);
+        const unsentItems = activeItems.filter(i => !i.sent);
+        return {
+          id: c.id,
+          checkNumber: c.checkNumber,
+          orderType: c.orderType || 'dine-in',
+          status: c.status,
+          fulfillmentStatus: c.fulfillmentStatus || null,
+          onlineOrderId: c.onlineOrderId || null,
+          customerName: c.customerName || null,
+          platformSource: c.platformSource || null,
+          guestCount: c.guestCount || null,
+          subtotal: c.subtotal || '0.00',
+          total: c.total || '0.00',
+          tableNumber: c.tableNumber || null,
+          openedAt: c.openedAt || c.createdAt || new Date().toISOString(),
+          closedAt: c.closedAt || null,
+          employeeName: emp ? `${emp.firstName || ''} ${emp.lastName || ''}`.trim() : null,
+          itemCount: activeItems.length,
+          unsentCount: unsentItems.length,
+          roundCount: c.roundCount || 0,
+          lastRoundAt: c.lastRoundAt || null,
+        };
+      });
+      return { status: 200, data: orderChecks };
+    }
+
+    const singleCheckMatch = pathname.match(/^\/api\/checks\/([^/]+)$/);
+    if (singleCheckMatch) {
+      const checkId = singleCheckMatch[1];
+      const reserved = ['orders', 'open', 'locks', 'active', 'closed'];
+      if (!reserved.includes(checkId)) {
+        const check = this.db.getOfflineCheck(checkId);
+        if (!check) {
+          return { status: 404, data: { message: 'Check not found (offline)' } };
+        }
+        const items = check.items || [];
+        const payments = check.payments || [];
+        const paidAmount = payments
+          .filter(p => p.paymentStatus !== 'voided' && !p.voided)
+          .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        const totalDue = parseFloat(check.total || check.subtotal || 0);
+        const tenderedAmount = payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        const changeDue = Math.max(0, tenderedAmount - totalDue);
+        const checkObj = { ...check };
+        delete checkObj.items;
+        delete checkObj.payments;
+        checkObj.openedAt = checkObj.openedAt || checkObj.createdAt;
+        return {
+          status: 200,
+          data: {
+            check: { ...checkObj, paidAmount, tenderedAmount, changeDue },
+            items,
+            payments,
+            refunds: [],
+          },
+        };
+      }
+    }
+
     if (pathname.startsWith('/api/checks')) {
       const rvcId = query?.rvcId;
       const status = query?.status;
@@ -951,21 +1029,29 @@ class OfflineApiInterceptor {
       const modMatch = pathname.match(/^\/api\/check-items\/([^/]+)\/modifiers/);
       if (modMatch) {
         const itemId = modMatch[1];
+        let updatedItem = null;
         const checks = this.db.getAllOfflineChecks ? this.db.getAllOfflineChecks() : [];
         for (const c of checks) {
           if (c.items) {
             const item = c.items.find(i => i.id === itemId);
             if (item) {
               item.modifiers = body.modifiers || body || [];
+              if (body.itemStatus) item.itemStatus = body.itemStatus;
               item.updatedAt = new Date().toISOString();
+              const modTotal = (item.modifiers || []).reduce((s, m) => s + parseFloat(m.priceDelta || m.price || 0), 0);
+              item.totalPrice = ((parseFloat(item.unitPrice || 0) + modTotal) * (item.quantity || 1)).toFixed(2);
               this._recalcCheckTotals(c);
               this.db.saveOfflineCheck(c);
+              updatedItem = { ...item };
               break;
             }
           }
         }
         this.db.queueOperation('update_modifiers', pathname, 'PATCH', body, 2);
-        return { status: 200, data: { success: true, offline: true, message: 'Modifiers updated (offline)' } };
+        if (updatedItem) {
+          return { status: 200, data: updatedItem };
+        }
+        return { status: 404, data: { message: 'Item not found (offline)' } };
       }
     }
 
@@ -1013,6 +1099,7 @@ class OfflineApiInterceptor {
       payments: [],
       serviceCharges: [],
       discounts: [],
+      openedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isOffline: true,
@@ -1126,6 +1213,7 @@ class OfflineApiInterceptor {
       amount: body.amount,
       tipAmount: body.tipAmount || '0.00',
       changeAmount: body.changeAmount || '0.00',
+      paymentStatus: 'completed',
       paidAt: new Date().toISOString(),
       isOffline: true,
     };
@@ -1138,7 +1226,8 @@ class OfflineApiInterceptor {
       check.payments.push(payment);
 
       let totalPaid = 0;
-      check.payments.forEach(p => totalPaid += parseFloat(p.amount || 0));
+      check.payments.filter(p => p.paymentStatus !== 'voided' && !p.voided)
+        .forEach(p => totalPaid += parseFloat(p.amount || 0));
       const totalDue = parseFloat(check.total || check.subtotal || 0);
       if (totalPaid >= totalDue) {
         check.status = 'closed';
@@ -1146,6 +1235,23 @@ class OfflineApiInterceptor {
       }
       check.updatedAt = new Date().toISOString();
       this.db.saveOfflineCheck(check);
+
+      const checkResponse = { ...check };
+      delete checkResponse.items;
+      delete checkResponse.payments;
+      checkResponse.openedAt = checkResponse.openedAt || checkResponse.createdAt;
+
+      this.db.queueOperation('create_payment', '/api/payments', 'POST', body, 1);
+
+      return {
+        status: 201,
+        data: {
+          ...checkResponse,
+          paidAmount: totalPaid,
+          payment,
+          autoPrintStatus: { success: false, message: 'Offline mode - no printer' },
+        },
+      };
     }
 
     this.db.queueOperation('create_payment', '/api/payments', 'POST', body, 1);

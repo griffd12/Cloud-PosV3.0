@@ -66,9 +66,10 @@ function isLocalFirstWrite(method, pathname) {
 
 const LOCAL_FIRST_READ_PATTERNS = [
   /^\/api\/checks\/open(\?|$)/,
+  /^\/api\/checks\/orders(\?|$)/,
   /^\/api\/checks\?/,
   /^\/api\/checks\/[^/]+\/full-details/,
-  /^\/api\/checks\/[^/]+$/,
+  /^\/api\/checks\/(?!orders$|open$|locks$|active$|closed$)[^/]+$/,
 ];
 
 function isLocalFirstRead(method, pathname, search) {
