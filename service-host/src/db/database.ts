@@ -143,6 +143,10 @@ export class Database {
       this.migrateToV5();
     }
     
+    if (fromVersion < 6) {
+      this.migrateToV6();
+    }
+    
     this.run('INSERT INTO schema_version (version) VALUES (?)', [toVersion]);
   }
   
@@ -247,6 +251,24 @@ export class Database {
     this.run(`CREATE INDEX IF NOT EXISTS idx_journal_device ON transaction_journal(device_id)`);
     
     console.log('[DB] v5 migration complete');
+  }
+  
+  private migrateToV6(): void {
+    console.log('[DB] Running v6 migration: checks.customer_id, checks.customer_name');
+    
+    try {
+      this.run('ALTER TABLE checks ADD COLUMN customer_id TEXT');
+    } catch (e: any) {
+      if (!e.message?.includes('duplicate column')) throw e;
+    }
+    
+    try {
+      this.run('ALTER TABLE checks ADD COLUMN customer_name TEXT');
+    } catch (e: any) {
+      if (!e.message?.includes('duplicate column')) throw e;
+    }
+    
+    console.log('[DB] v6 migration complete');
   }
   
   // ==========================================================================

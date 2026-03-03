@@ -14,7 +14,7 @@
 // CONFIGURATION TABLES (Synced from cloud)
 // =============================================================================
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export const CREATE_SCHEMA_SQL = `
 -- Schema version tracking
@@ -512,6 +512,8 @@ CREATE TABLE IF NOT EXISTS checks (
   voided_at TEXT,
   void_reason TEXT,
   void_employee_id TEXT,
+  customer_id TEXT,
+  customer_name TEXT,
   cloud_synced INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))

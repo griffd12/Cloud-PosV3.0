@@ -174,9 +174,67 @@ export class ConfigSync {
     try {
       console.log(`Starting full configuration sync for property ${this.propertyId}...`);
       
-      const config = await this.cloud.get<FullConfigResponse>(
+      const rawResponse = await this.cloud.get<any>(
         `/api/sync/config/full?propertyId=${encodeURIComponent(this.propertyId)}`
       );
+      
+      console.log(`[ConfigSync] Raw response keys: ${Object.keys(rawResponse).join(', ')}`);
+      
+      const innerData = rawResponse.data || rawResponse;
+      console.log(`[ConfigSync] Inner data keys: ${Object.keys(innerData).join(', ')}`);
+      
+      const config: FullConfigResponse = {
+        version: rawResponse.configVersion || rawResponse.version || 1,
+        propertyId: this.propertyId,
+        syncedAt: rawResponse.timestamp || new Date().toISOString(),
+        enterprises: innerData.enterprises || (innerData.enterprise ? [innerData.enterprise] : undefined),
+        properties: innerData.properties || (innerData.property ? [innerData.property] : undefined),
+        rvcs: innerData.rvcs || innerData.revenueCenters,
+        majorGroups: innerData.majorGroups,
+        familyGroups: innerData.familyGroups,
+        slus: innerData.slus,
+        menuItems: innerData.menuItems,
+        menuItemSlus: innerData.menuItemSlus,
+        modifierGroups: innerData.modifierGroups,
+        modifiers: innerData.modifiers,
+        modifierGroupModifiers: innerData.modifierGroupModifiers,
+        menuItemModifierGroups: innerData.menuItemModifierGroups,
+        printClasses: innerData.printClasses,
+        employees: innerData.employees,
+        roles: innerData.roles,
+        privileges: innerData.privileges,
+        employeeAssignments: innerData.employeeAssignments,
+        jobCodes: innerData.jobCodes,
+        employeeJobCodes: innerData.employeeJobCodes,
+        workstations: innerData.workstations,
+        printers: innerData.printers,
+        kdsDevices: innerData.kdsDevices,
+        orderDevices: innerData.orderDevices,
+        orderDevicePrinters: innerData.orderDevicePrinters,
+        orderDeviceKds: innerData.orderDeviceKds,
+        printClassRouting: innerData.printClassRouting,
+        terminalDevices: innerData.terminalDevices,
+        taxGroups: innerData.taxGroups,
+        tenders: innerData.tenders,
+        discounts: innerData.discounts,
+        serviceCharges: innerData.serviceCharges,
+        posLayouts: innerData.posLayouts,
+        posLayoutCells: innerData.posLayoutCells,
+        posLayoutRvcAssignments: innerData.posLayoutRvcAssignments,
+        paymentProcessors: innerData.paymentProcessors,
+        loyaltyPrograms: innerData.loyaltyPrograms,
+        loyaltyMembers: innerData.loyaltyMembers,
+        loyaltyMemberEnrollments: innerData.loyaltyMemberEnrollments,
+        fiscalPeriods: innerData.fiscalPeriods,
+        itemAvailability: innerData.itemAvailability,
+        emcOptionFlags: innerData.emcOptionFlags,
+      };
+      
+      const arraySizes = Object.entries(config)
+        .filter(([_, v]) => Array.isArray(v) && (v as any[]).length > 0)
+        .map(([k, v]) => `${k}:${(v as any[]).length}`)
+        .join(', ');
+      console.log(`[ConfigSync] Mapped entity arrays: ${arraySizes || '(none)'}`);
       
       totalRecords += this.syncHierarchy(config);
       totalRecords += this.syncMenu(config);
