@@ -93,3 +93,7 @@ Preferred communication style: Simple, everyday language.
 - **Check 404 reopen/edit fix**: 6 interceptor locations now fall through to cloud in GREEN mode
 - **Checks disappearing fix**: Root cause removal of architecture violation
 - **Split check multi-select**: Set-based multi-item selection and batch move
+
+### v3.1.28 Hotfix (March 2026)
+- **CAPS schema fix**: Added missing `code TEXT` column to modifier_groups CREATE TABLE in CREATE_SCHEMA_SQL, plus missing check_items columns (sent_to_kitchen, sent, discount_id, discount_name, discount_amount, discount_type, modifiers_json). Fresh CAPS databases now get complete schema without needing migration.
+- **GREEN mode interceptor fallthrough**: Fixed main.cjs protocol handler so interceptor `null` returns (GREEN mode fallthrough) reach cloud via `electronNet.fetch()` instead of being queued. Added `request.clone()` before body parsing to preserve request for cloud fallthrough. Only queues operations in YELLOW/RED modes. Fixes merge checks, reopen/edit closed checks, and terminal-sessions in GREEN mode.

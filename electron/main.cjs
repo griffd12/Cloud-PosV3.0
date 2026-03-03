@@ -2607,11 +2607,14 @@ function registerProtocolInterceptor() {
     const isApiRequest = url.pathname.startsWith('/api/');
 
     if (isApiRequest && offlineInterceptor && isLocalFirstWrite(request.method, url.pathname)) {
+      const cloudFallbackClone = request.clone();
       const body = await parseRequestBody(request);
       const queryParams = Object.fromEntries(url.searchParams);
+      let interceptorHandled = false;
       if (offlineInterceptor.canHandleOffline(request.method, url.pathname)) {
         const result = offlineInterceptor.handleRequest(request.method, url.pathname, queryParams, body);
         if (result) {
+          interceptorHandled = true;
           appLogger.info('Interceptor', `LOCAL-FIRST: ${request.method} ${url.pathname} -> ${result.status} [mode=${connectionMode}]`);
           broadcastSyncStatus();
           const sendMatch = url.pathname.match(/^\/api\/checks\/([^/]+)\/send/);
@@ -2641,12 +2644,22 @@ function registerProtocolInterceptor() {
             status: result.status,
             headers: { 'Content-Type': 'application/json', 'X-Local-First': 'true', 'X-Connection-Mode': connectionMode },
           });
+        } else if (connectionMode === 'green') {
+          appLogger.info('Interceptor', `GREEN-FALLTHROUGH: ${request.method} ${url.pathname} -> cloud (interceptor returned null)`);
+          return electronNet.fetch(cloudFallbackClone, { bypassCustomProtocolHandlers: true });
         }
       }
-      appLogger.warn('Interceptor', `LOCAL-FIRST: no handler for ${request.method} ${url.pathname}, queuing for sync`);
-      if (enhancedOfflineDb && enhancedOfflineDb.queueOperation) {
-        enhancedOfflineDb.queueOperation('unhandled_write', url.pathname, request.method, body || {}, 3);
-        broadcastSyncStatus();
+      if (!interceptorHandled) {
+        if (connectionMode === 'green') {
+          appLogger.info('Interceptor', `GREEN-FALLTHROUGH: ${request.method} ${url.pathname} -> cloud (not handled offline)`);
+          return electronNet.fetch(cloudFallbackClone, { bypassCustomProtocolHandlers: true });
+        } else {
+          appLogger.warn('Interceptor', `OFFLINE-QUEUE: ${request.method} ${url.pathname}, queuing for sync [mode=${connectionMode}]`);
+          if (enhancedOfflineDb && enhancedOfflineDb.queueOperation) {
+            enhancedOfflineDb.queueOperation('unhandled_write', url.pathname, request.method, body || {}, 3);
+            broadcastSyncStatus();
+          }
+        }
       }
     }
 
