@@ -376,33 +376,37 @@ async function syncOfflineData() {
   const pending = getPendingOperations();
   if (pending.length === 0) return;
 
-  appLogger.info('Sync', `Syncing ${pending.length} offline operations`);
-  const serverUrl = getServerUrl();
+  const capsUrl = getCapsServiceHostUrl();
+  if (!capsUrl) {
+    appLogger.debug('Sync', `Legacy syncOfflineData: ${pending.length} ops queued but no CAPS URL (WS never syncs directly to cloud)`);
+    return;
+  }
+
+  appLogger.info('Sync', `Forwarding ${pending.length} legacy offline operations to CAPS`);
 
   for (const op of pending) {
     try {
-      const response = await fetch(`${serverUrl}${op.endpoint}`, {
-        method: op.method || 'POST',
+      const response = await fetch(`${capsUrl}/api/caps/sync/queue-operation`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: op.body,
+        body: JSON.stringify({
+          type: op.type,
+          endpoint: op.endpoint,
+          method: op.method || 'POST',
+          body: op.body,
+          priority: op.priority || 5,
+        }),
+        signal: AbortSignal.timeout(5000),
       });
 
       if (response.ok) {
         markOperationSynced(op.id || op.created_at);
-        appLogger.info('Sync', `Synced: ${op.type} -> ${op.endpoint}`);
-      } else if (response.status === 400 || response.status === 404) {
-        if (offlineDb) {
-          offlineDb.prepare("UPDATE offline_queue SET retry_count = 10, error = ? WHERE id = ?").run(`HTTP ${response.status} (permanent)`, op.id);
-        }
-        appLogger.warn('Sync', `Permanently failed: ${op.endpoint}`, { status: response.status });
+        appLogger.info('Sync', `CAPS forwarded: ${op.type} -> ${op.endpoint}`);
       } else {
-        if (offlineDb) {
-          offlineDb.prepare("UPDATE offline_queue SET retry_count = retry_count + 1, error = ? WHERE id = ?").run(`HTTP ${response.status}`, op.id);
-        }
-        appLogger.warn('Sync', `Sync failed: ${op.endpoint}`, { status: response.status });
+        appLogger.warn('Sync', `CAPS forward failed: ${op.endpoint} -> HTTP ${response.status}`);
       }
     } catch (e) {
-      appLogger.warn('Sync', `Sync error: ${op.endpoint}`, e.message);
+      appLogger.warn('Sync', `CAPS forward error: ${op.endpoint}`, e.message);
       break;
     }
   }
