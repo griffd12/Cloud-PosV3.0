@@ -97,3 +97,19 @@ Preferred communication style: Simple, everyday language.
 ### v3.1.28 Hotfix (March 2026)
 - **CAPS schema fix**: Added missing `code TEXT` column to modifier_groups CREATE TABLE in CREATE_SCHEMA_SQL, plus missing check_items columns (sent_to_kitchen, sent, discount_id, discount_name, discount_amount, discount_type, modifiers_json). Fresh CAPS databases now get complete schema without needing migration.
 - **GREEN mode interceptor fallthrough**: Fixed main.cjs protocol handler so interceptor `null` returns (GREEN mode fallthrough) reach cloud via `electronNet.fetch()` instead of being queued. Added `request.clone()` before body parsing to preserve request for cloud fallthrough. Only queues operations in YELLOW/RED modes. Fixes merge checks, reopen/edit closed checks, and terminal-sessions in GREEN mode.
+
+### v3.1.29 Changes (March 2026)
+- **CAPS payments table fix**: Added `payments` table to CREATE_SCHEMA_SQL — PaymentController's INSERT no longer crashes with "no such table".
+- **Complete send-to-kitchen rewrite with full EMC routing**: Replaced basic `UPDATE check_items SET sent_to_kitchen=1` with proper EMC-config-driven routing:
+  - Routes items via menu_item.print_class_id → print_class_routing (filtered by RVC) → order_device → order_device_kds → kds_device
+  - Respects RVC settings: dynamicOrderMode, domSendMode (fire_on_fly/fire_on_next/fire_on_tender), kitchenPrintMode
+  - Respects workstation settings: defaultOrderDeviceId, defaultKdsExpoId, workstation_order_devices assignments
+  - Respects order device settings: sendOn (send_button/dynamic), sendVoids, kdsDeviceId controller
+  - Creates separate kds_tickets per KDS device with correct kds_device_id
+  - Creates proper kds_ticket_items records for each ticket
+  - Handles expo stations (expoMode=true devices get ALL items from all stations)
+  - Unrouted items fall back to default order device or catch-all ticket
+- **CAPS WebSocket dual path**: WebSocket server now accepts connections on both `/ws` and `/ws/kds` using noServer mode with manual upgrade handling. KDS devices can now connect to CAPS and receive real-time ticket updates.
+- **Gift card/loyalty GREEN mode fallthrough**: Interceptor returns null (falls through to cloud) for gift-card and loyalty routes in GREEN mode. 503 only in YELLOW/RED modes. Affects 5 handler locations (GET loyalty-members, GET gift-cards, POST gift-cards, POST loyalty, POST pos/loyalty/earn).
+- **8 new CAPS tables**: terminal_sessions, registered_devices, print_jobs, workstation_order_devices, ingredient_prefixes, rvc_counters, break_rules, role_rules — all matching cloud schema.
+- **Config sync for new tables**: Added upsert methods and syncFull/syncDelta integration for workstationOrderDevices, ingredientPrefixes, rvcCounters, breakRules, roleRules.
