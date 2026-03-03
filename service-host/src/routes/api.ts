@@ -1589,72 +1589,79 @@ export function createApiRoutes(
 
       db.run('PRAGMA foreign_keys = OFF');
       try {
-        db.run(`INSERT OR REPLACE INTO checks (id, cloud_id, check_number, rvc_id, employee_id, workstation_id, order_type, table_number, guest_count, status, subtotal, tax, discount_total, service_charge_total, total, amount_due, current_round, business_date, opened_at, closed_at, voided_at, void_reason, customer_id, customer_name, cloud_synced, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`, [
-          check.id, check.cloudId || check.cloud_id || null, check.checkNumber || check.check_number || 0,
-          check.rvcId || check.rvc_id || '', check.employeeId || check.employee_id || '',
-          check.workstationId || check.workstation_id || null, check.orderType || check.order_type || 'dine_in',
-          check.tableNumber || check.table_number || null, check.guestCount || check.guest_count || 1,
-          check.status || 'open', check.subtotal || 0, check.tax || 0,
-          check.discountTotal || check.discount_total || 0, check.serviceChargeTotal || check.service_charge_total || 0,
-          check.total || 0, check.amountDue || check.amount_due || 0,
-          check.currentRound || check.current_round || 1, check.businessDate || check.business_date || null,
-          check.openedAt || check.opened_at || new Date().toISOString(), check.closedAt || check.closed_at || null,
-          check.voidedAt || check.voided_at || null, check.voidReason || check.void_reason || null,
-          check.customerId || check.customer_id || null, check.customerName || check.customer_name || null,
-          check.createdAt || check.created_at || new Date().toISOString(), new Date().toISOString(),
-        ]);
+        db.transaction(() => {
+          db.run(`INSERT OR REPLACE INTO checks (id, cloud_id, check_number, rvc_id, employee_id, workstation_id, order_type, table_number, guest_count, status, subtotal, tax, discount_total, service_charge_total, total, amount_due, current_round, business_date, opened_at, closed_at, voided_at, void_reason, customer_id, customer_name, cloud_synced, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`, [
+            check.id, check.cloudId || check.cloud_id || null, check.checkNumber || check.check_number || 0,
+            check.rvcId || check.rvc_id || '', check.employeeId || check.employee_id || '',
+            check.workstationId || check.workstation_id || null, check.orderType || check.order_type || 'dine_in',
+            check.tableNumber || check.table_number || null, check.guestCount || check.guest_count || 1,
+            check.status || 'open', check.subtotal || 0, check.tax || 0,
+            check.discountTotal || check.discount_total || 0, check.serviceChargeTotal || check.service_charge_total || 0,
+            check.total || 0, check.amountDue || check.amount_due || 0,
+            check.currentRound || check.current_round || 1, check.businessDate || check.business_date || null,
+            check.openedAt || check.opened_at || new Date().toISOString(), check.closedAt || check.closed_at || null,
+            check.voidedAt || check.voided_at || null, check.voidReason || check.void_reason || null,
+            check.customerId || check.customer_id || null, check.customerName || check.customer_name || null,
+            check.createdAt || check.created_at || new Date().toISOString(), new Date().toISOString(),
+          ]);
 
-        if (check.items && Array.isArray(check.items)) {
-          for (const item of check.items) {
-            db.run(`INSERT OR REPLACE INTO check_items (id, check_id, round_id, round_number, menu_item_id, name, short_name, quantity, unit_price, total_price, tax_amount, tax_group_id, print_class_id, modifiers, seat_number, course_number, sent_at, kds_status, voided, void_reason, parent_item_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
-              item.id, check.id, item.roundId || item.round_id || null, item.roundNumber || item.round_number || 1,
-              item.menuItemId || item.menu_item_id || '', item.name || '', item.shortName || item.short_name || null,
-              item.quantity || 1, item.unitPrice || item.unit_price || 0, item.totalPrice || item.total_price || 0,
-              item.taxAmount || item.tax_amount || 0, item.taxGroupId || item.tax_group_id || null,
-              item.printClassId || item.print_class_id || null,
-              typeof item.modifiers === 'string' ? item.modifiers : JSON.stringify(item.modifiers || null),
-              item.seatNumber || item.seat_number || null, item.courseNumber || item.course_number || 1,
-              item.sentAt || item.sent_at || null, item.kdsStatus || item.kds_status || 'pending',
-              item.voided ? 1 : 0, item.voidReason || item.void_reason || null,
-              item.parentItemId || item.parent_item_id || null, item.createdAt || item.created_at || new Date().toISOString(),
-            ]);
-          }
-        }
+          db.run('DELETE FROM check_items WHERE check_id = ?', [check.id]);
+          db.run('DELETE FROM check_payments WHERE check_id = ?', [check.id]);
+          db.run('DELETE FROM check_discounts WHERE check_id = ?', [check.id]);
+          db.run('DELETE FROM check_service_charges WHERE check_id = ?', [check.id]);
 
-        if (check.payments && Array.isArray(check.payments)) {
-          for (const pmt of check.payments) {
-            db.run(`INSERT OR REPLACE INTO check_payments (id, check_id, tender_id, tender_type, amount, tip_amount, change_amount, card_last4, card_brand, auth_code, reference_number, status, voided, void_reason, business_date, cloud_synced, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`, [
-              pmt.id, check.id, pmt.tenderId || pmt.tender_id || '', pmt.tenderType || pmt.tender_type || '',
-              pmt.amount || 0, pmt.tipAmount || pmt.tip_amount || 0, pmt.changeAmount || pmt.change_amount || 0,
-              pmt.cardLast4 || pmt.card_last4 || null, pmt.cardBrand || pmt.card_brand || null,
-              pmt.authCode || pmt.auth_code || null, pmt.referenceNumber || pmt.reference_number || null,
-              pmt.status || 'authorized', pmt.voided ? 1 : 0, pmt.voidReason || pmt.void_reason || null,
-              pmt.businessDate || pmt.business_date || null, pmt.createdAt || pmt.created_at || new Date().toISOString(),
-            ]);
+          if (check.items && Array.isArray(check.items)) {
+            for (const item of check.items) {
+              db.run(`INSERT INTO check_items (id, check_id, round_id, round_number, menu_item_id, name, short_name, quantity, unit_price, total_price, tax_amount, tax_group_id, print_class_id, modifiers, seat_number, course_number, sent_at, kds_status, voided, void_reason, parent_item_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+                item.id, check.id, item.roundId || item.round_id || null, item.roundNumber || item.round_number || 1,
+                item.menuItemId || item.menu_item_id || '', item.name || '', item.shortName || item.short_name || null,
+                item.quantity || 1, item.unitPrice || item.unit_price || 0, item.totalPrice || item.total_price || 0,
+                item.taxAmount || item.tax_amount || 0, item.taxGroupId || item.tax_group_id || null,
+                item.printClassId || item.print_class_id || null,
+                typeof item.modifiers === 'string' ? item.modifiers : JSON.stringify(item.modifiers || null),
+                item.seatNumber || item.seat_number || null, item.courseNumber || item.course_number || 1,
+                item.sentAt || item.sent_at || null, item.kdsStatus || item.kds_status || 'pending',
+                item.voided ? 1 : 0, item.voidReason || item.void_reason || null,
+                item.parentItemId || item.parent_item_id || null, item.createdAt || item.created_at || new Date().toISOString(),
+              ]);
+            }
           }
-        }
 
-        if (check.discounts && Array.isArray(check.discounts)) {
-          for (const disc of check.discounts) {
-            db.run(`INSERT OR REPLACE INTO check_discounts (id, check_id, check_item_id, discount_id, name, discount_type, amount, employee_id, manager_employee_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
-              disc.id, check.id, disc.checkItemId || disc.check_item_id || null,
-              disc.discountId || disc.discount_id || '', disc.name || '',
-              disc.discountType || disc.discount_type || 'percent', disc.amount || 0,
-              disc.employeeId || disc.employee_id || null, disc.managerEmployeeId || disc.manager_employee_id || null,
-              disc.createdAt || disc.created_at || new Date().toISOString(),
-            ]);
+          if (check.payments && Array.isArray(check.payments)) {
+            for (const pmt of check.payments) {
+              db.run(`INSERT INTO check_payments (id, check_id, tender_id, tender_type, amount, tip_amount, change_amount, card_last4, card_brand, auth_code, reference_number, status, voided, void_reason, business_date, cloud_synced, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`, [
+                pmt.id, check.id, pmt.tenderId || pmt.tender_id || '', pmt.tenderType || pmt.tender_type || '',
+                pmt.amount || 0, pmt.tipAmount || pmt.tip_amount || 0, pmt.changeAmount || pmt.change_amount || 0,
+                pmt.cardLast4 || pmt.card_last4 || null, pmt.cardBrand || pmt.card_brand || null,
+                pmt.authCode || pmt.auth_code || null, pmt.referenceNumber || pmt.reference_number || null,
+                pmt.status || 'authorized', pmt.voided ? 1 : 0, pmt.voidReason || pmt.void_reason || null,
+                pmt.businessDate || pmt.business_date || null, pmt.createdAt || pmt.created_at || new Date().toISOString(),
+              ]);
+            }
           }
-        }
 
-        if (check.serviceCharges && Array.isArray(check.serviceCharges)) {
-          for (const sc of check.serviceCharges) {
-            db.run(`INSERT OR REPLACE INTO check_service_charges (id, check_id, service_charge_id, name, charge_type, amount, auto_applied, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
-              sc.id, check.id, sc.serviceChargeId || sc.service_charge_id || '',
-              sc.name || '', sc.chargeType || sc.charge_type || 'percent', sc.amount || 0,
-              sc.autoApplied || sc.auto_applied ? 1 : 0, sc.createdAt || sc.created_at || new Date().toISOString(),
-            ]);
+          if (check.discounts && Array.isArray(check.discounts)) {
+            for (const disc of check.discounts) {
+              db.run(`INSERT INTO check_discounts (id, check_id, check_item_id, discount_id, name, discount_type, amount, employee_id, manager_employee_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+                disc.id, check.id, disc.checkItemId || disc.check_item_id || null,
+                disc.discountId || disc.discount_id || '', disc.name || '',
+                disc.discountType || disc.discount_type || 'percent', disc.amount || 0,
+                disc.employeeId || disc.employee_id || null, disc.managerEmployeeId || disc.manager_employee_id || null,
+                disc.createdAt || disc.created_at || new Date().toISOString(),
+              ]);
+            }
           }
-        }
+
+          if (check.serviceCharges && Array.isArray(check.serviceCharges)) {
+            for (const sc of check.serviceCharges) {
+              db.run(`INSERT INTO check_service_charges (id, check_id, service_charge_id, name, charge_type, amount, auto_applied, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
+                sc.id, check.id, sc.serviceChargeId || sc.service_charge_id || '',
+                sc.name || '', sc.chargeType || sc.charge_type || 'percent', sc.amount || 0,
+                sc.autoApplied || sc.auto_applied ? 1 : 0, sc.createdAt || sc.created_at || new Date().toISOString(),
+              ]);
+            }
+          }
+        });
 
         console.log(`[CAPS Sync] Check ${check.id} synced with ${check.items?.length || 0} items, ${check.payments?.length || 0} payments`);
       } finally {
