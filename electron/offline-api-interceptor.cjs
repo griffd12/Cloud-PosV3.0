@@ -1659,37 +1659,45 @@ class OfflineApiInterceptor {
       return { status: 400, data: { message: 'No split operations provided' } };
     }
 
-    const newCheckId = `offline_${crypto.randomUUID()}`;
-    const newCheck = {
-      id: newCheckId,
-      rvcId: sourceCheck.rvcId,
-      employeeId: sourceCheck.employeeId,
-      orderType: sourceCheck.orderType,
-      status: 'open',
-      subtotal: '0.00',
-      taxTotal: '0.00',
-      discountTotal: '0.00',
-      total: '0.00',
-      guestCount: sourceCheck.guestCount || 1,
-      tableNumber: sourceCheck.tableNumber,
-      items: [],
-      payments: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      isOffline: true,
-      businessDate: sourceCheck.businessDate,
-      originBusinessDate: sourceCheck.originBusinessDate || sourceCheck.businessDate,
-    };
+    const uniqueTargetIndices = [...new Set(operations.map(op => op.targetCheckIndex ?? 0))];
+    const newChecksByIndex = {};
+    for (const idx of uniqueTargetIndices) {
+      const newCheckId = `offline_${crypto.randomUUID()}`;
+      newChecksByIndex[idx] = {
+        id: newCheckId,
+        rvcId: sourceCheck.rvcId,
+        employeeId: sourceCheck.employeeId,
+        orderType: sourceCheck.orderType,
+        status: 'open',
+        subtotal: '0.00',
+        taxTotal: '0.00',
+        discountTotal: '0.00',
+        total: '0.00',
+        guestCount: sourceCheck.guestCount || 1,
+        tableNumber: sourceCheck.tableNumber,
+        items: [],
+        payments: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isOffline: true,
+        businessDate: sourceCheck.businessDate,
+        originBusinessDate: sourceCheck.originBusinessDate || sourceCheck.businessDate,
+      };
+    }
 
     for (const op of operations) {
       const itemId = op.itemId || op.checkItemId;
       const sourceItem = sourceCheck.items?.find(i => i.id === itemId);
       if (!sourceItem) continue;
 
+      const targetIdx = op.targetCheckIndex ?? 0;
+      const targetCheck = newChecksByIndex[targetIdx];
+      if (!targetCheck) continue;
+
       if (op.type === 'move') {
         sourceCheck.items = sourceCheck.items.filter(i => i.id !== itemId);
-        sourceItem.checkId = newCheckId;
-        newCheck.items.push(sourceItem);
+        sourceItem.checkId = targetCheck.id;
+        targetCheck.items.push(sourceItem);
       } else if (op.type === 'share') {
         const ratio = parseFloat(op.shareRatio || 0.5);
         const originalQty = sourceItem.quantity || 1;
@@ -1701,19 +1709,24 @@ class OfflineApiInterceptor {
         const newItem = {
           ...sourceItem,
           id: `offline_item_${crypto.randomUUID()}`,
-          checkId: newCheckId,
+          checkId: targetCheck.id,
           quantity: Math.max(1, originalQty - sourceItem.quantity),
         };
         newItem.totalPrice = (newItem.quantity * originalPrice).toFixed(2);
-        newCheck.items.push(newItem);
+        targetCheck.items.push(newItem);
       }
     }
 
     this._recalcCheckTotals(sourceCheck);
-    this._recalcCheckTotals(newCheck);
-
     this.db.saveOfflineCheck(sourceCheck);
-    const created = this.db.createCheckAtomic(newCheck.rvcId, newCheck);
+
+    const createdChecks = [];
+    for (const idx of uniqueTargetIndices) {
+      const newCheck = newChecksByIndex[idx];
+      this._recalcCheckTotals(newCheck);
+      const created = this.db.createCheckAtomic(newCheck.rvcId, newCheck);
+      createdChecks.push(created || newCheck);
+    }
 
     this.db.queueOperation('split_check', `/api/checks/${sourceCheckId}/split`, 'POST', body, 1);
 
@@ -1721,7 +1734,7 @@ class OfflineApiInterceptor {
       status: 200,
       data: {
         sourceCheck: sourceCheck,
-        newChecks: [created || newCheck],
+        newChecks: createdChecks,
         offline: true,
         message: 'Check split (offline)',
       },

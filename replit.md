@@ -113,3 +113,11 @@ Preferred communication style: Simple, everyday language.
 - **Gift card/loyalty GREEN mode fallthrough**: Interceptor returns null (falls through to cloud) for gift-card and loyalty routes in GREEN mode. 503 only in YELLOW/RED modes. Affects 5 handler locations (GET loyalty-members, GET gift-cards, POST gift-cards, POST loyalty, POST pos/loyalty/earn).
 - **8 new CAPS tables**: terminal_sessions, registered_devices, print_jobs, workstation_order_devices, ingredient_prefixes, rvc_counters, break_rules, role_rules — all matching cloud schema.
 - **Config sync for new tables**: Added upsert methods and syncFull/syncDelta integration for workstationOrderDevices, ingredientPrefixes, rvcCounters, breakRules, roleRules.
+
+### v3.1.30 Fixes (March 2026)
+- **KDS 404 fix**: Added `/api/health` alias to CAPS API router (was only at `/health`, causing YELLOW→RED fallback). Added `/api/pos/modifier-map` route to CAPS for KDS modifier data loading.
+- **Send-to-kitchen 400 fix**: Fixed `KdsController.createTicket()` INSERT — added missing `round_number NOT NULL`, changed `station_id` to `kds_device_id`, added `order_device_id` and `table_number`. Fixed `kds_ticket_items` INSERT columns (`modifiers_json`→`modifiers`, `course`→`course_number`).
+- **Check-state sync fix**: Fixed check_items INSERT in CAPS check-state sync — added missing `round_number`, `total_price` (qty×price), `print_class_id`, `sent_to_kitchen` NOT NULL columns.
+- **Split check multi-check fix**: Rewrote `splitCheckOffline()` to create one new check per unique `targetCheckIndex` (was creating single check for all items, ignoring target index).
+- **Credit card terminal session fix**: Added CAPS `/api/terminal-sessions` cloud-proxy routes (POST+GET). CAPS forwards terminal session requests to cloud when connected, returns clear 503 "Credit card processing requires cloud connection" when disconnected.
+- **Payment sync fix**: Added CAPS `/api/payments` POST route for offline payment sync forwarding (was returning 400 due to missing route).
