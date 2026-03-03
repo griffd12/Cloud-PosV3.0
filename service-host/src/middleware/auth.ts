@@ -26,7 +26,7 @@ export function createAuthMiddleware(db: Database) {
       token = workstationToken;
     }
     
-    if (req.path === '/health') {
+    if (req.path === '/health' || req.path.startsWith('/caps/sync/')) {
       return next();
     }
 

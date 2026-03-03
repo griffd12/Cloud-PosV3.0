@@ -434,6 +434,8 @@ class ServiceHost {
       console.log('  GET  /api/kds/tickets     - Get KDS tickets');
       console.log('  POST /api/payment/authorize - Authorize payment');
       console.log('  GET  /api/caps/connected-devices - CAPS device tracker');
+      console.log('  POST /api/caps/sync/check-state  - WS check sync');
+      console.log('  POST /api/caps/sync/queue-operation - WS operation sync');
       console.log('  WS   /ws                  - Real-time updates');
       console.log('');
     });
