@@ -410,24 +410,32 @@ async function syncOfflineData() {
 }
 
 async function triggerBackgroundSync() {
-  if (!isOnline) return;
-  const serverUrl = getServerUrl();
+  const capsUrl = getCapsServiceHostUrl();
 
   try {
     if (enhancedOfflineDb) {
-      const result = await enhancedOfflineDb.syncToCloud(serverUrl);
-      lastSyncAt = new Date().toISOString();
-      if (result.failed > 0) {
-        lastSyncError = `${result.failed} operations failed`;
-      } else {
-        lastSyncError = null;
+      let result;
+      if (capsUrl && enhancedOfflineDb.syncToCaps) {
+        result = await enhancedOfflineDb.syncToCaps(capsUrl);
+        lastSyncAt = new Date().toISOString();
+        if (result.failed > 0) {
+          lastSyncError = `${result.failed} operations failed (CAPS sync)`;
+        } else {
+          lastSyncError = null;
+        }
+        const failedCount = enhancedOfflineDb.getFailedOperationCount ? enhancedOfflineDb.getFailedOperationCount() : 0;
+        const remaining = result.remaining || 0;
+        if (result.synced > 0 || result.failed > 0) {
+          appLogger.info('Sync', `CAPS sync: ${result.synced} synced, ${result.failed} failed, ${remaining} pending` + (failedCount > 0 ? `, ${failedCount} permanently failed` : ''));
+        }
+      } else if (isOnline) {
+        appLogger.debug('Sync', 'No CAPS URL configured, skipping background sync (WS never syncs directly to cloud)');
       }
-      const failedCount = enhancedOfflineDb.getFailedOperationCount ? enhancedOfflineDb.getFailedOperationCount() : 0;
-      const remaining = result.remaining || 0;
-      appLogger.info('Sync', `Background sync: ${result.synced} synced, ${result.failed} failed, ${remaining} pending` + (failedCount > 0 ? `, ${failedCount} permanently failed` : ''));
     }
 
-    await syncOfflineData();
+    if (isOnline) {
+      await syncOfflineData();
+    }
   } catch (e) {
     lastSyncError = e.message;
     appLogger.warn('Sync', `Background sync error: ${e.message}`);
@@ -439,11 +447,11 @@ async function triggerBackgroundSync() {
 function startBackgroundSyncWorker() {
   if (backgroundSyncTimer) clearInterval(backgroundSyncTimer);
   backgroundSyncTimer = setInterval(async () => {
-    if (connectionMode === 'green' && isOnline) {
+    if (connectionMode === 'green' || connectionMode === 'yellow') {
       await triggerBackgroundSync();
     }
   }, 5000);
-  appLogger.info('Sync', 'Background sync worker started (5s interval when GREEN)');
+  appLogger.info('Sync', 'Background sync worker started (5s interval, syncs to CAPS in GREEN/YELLOW)');
 }
 
 async function checkConnectivity() {
@@ -1500,8 +1508,12 @@ function setupIpcHandlers() {
 
   ipcMain.handle('offline-db-sync-to-cloud', async () => {
     if (!enhancedOfflineDb) return { synced: 0, failed: 0 };
-    const serverUrl = getServerUrl();
-    return enhancedOfflineDb.syncToCloud(serverUrl);
+    const capsUrl = getCapsServiceHostUrl();
+    if (capsUrl && enhancedOfflineDb.syncToCaps) {
+      return enhancedOfflineDb.syncToCaps(capsUrl);
+    }
+    appLogger.debug('Sync', 'IPC sync: no CAPS URL, operations will remain queued');
+    return { synced: 0, failed: 0, reason: 'no CAPS URL configured' };
   });
 
   ipcMain.handle('offline-db-get-checks', async (event, { rvcId, status }) => {
