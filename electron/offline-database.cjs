@@ -381,6 +381,16 @@ class OfflineDatabase {
       CREATE TABLE IF NOT EXISTS payment_terminals (
         id TEXT PRIMARY KEY,
         property_id TEXT,
+        enterprise_id TEXT,
+        data TEXT NOT NULL,
+        updated_at TEXT DEFAULT (datetime('now'))
+      );
+
+      -- Payment processors cache
+      CREATE TABLE IF NOT EXISTS payment_processors (
+        id TEXT PRIMARY KEY,
+        property_id TEXT,
+        enterprise_id TEXT,
         data TEXT NOT NULL,
         updated_at TEXT DEFAULT (datetime('now'))
       );
@@ -603,6 +613,30 @@ class OfflineDatabase {
       offlineDbLogger.warn('Migration', `Index idx_offline_checks_rvc_check_number skipped: ${e.message}`);
     }
 
+    try {
+      this.db.exec(`CREATE TABLE IF NOT EXISTS payment_processors (
+        id TEXT PRIMARY KEY,
+        property_id TEXT,
+        enterprise_id TEXT,
+        data TEXT NOT NULL,
+        updated_at TEXT DEFAULT (datetime('now'))
+      )`);
+    } catch (e) {
+      offlineDbLogger.warn('Migration', `payment_processors table creation: ${e.message}`);
+    }
+
+    for (const tbl of ['payment_terminals', 'payment_processors']) {
+      try {
+        const columns = this.db.pragma(`table_info(${tbl})`);
+        if (!columns.some(col => col.name === 'enterprise_id')) {
+          this.db.exec(`ALTER TABLE ${tbl} ADD COLUMN enterprise_id TEXT`);
+          offlineDbLogger.info('Migration', `Added enterprise_id column to ${tbl}`);
+        }
+      } catch (e) {
+        offlineDbLogger.warn('Migration', `Migration skipped for ${tbl}: ${e.message}`);
+      }
+    }
+
     this.updateCheckCountersAfterSync();
   }
 
@@ -768,6 +802,8 @@ class OfflineDatabase {
         { table: 'order_devices', url: `/api/order-devices?propertyId=${propertyId}` },
         { table: 'order_device_printers', url: `/api/sync/order-device-printers` },
         { table: 'order_device_kds', url: `/api/sync/order-device-kds` },
+        { table: 'payment_terminals', url: `/api/terminal-devices?propertyId=${propertyId}` },
+        { table: 'payment_processors', url: `/api/payment-processors?propertyId=${propertyId}` },
       );
     }
 

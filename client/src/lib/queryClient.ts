@@ -234,18 +234,22 @@ export const getQueryFn: <T>(options: {
     }
   };
 
+const isElectronEnv = typeof window !== 'undefined' && !!(window as any).electronAPI;
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: 0, // Data is immediately stale - allows invalidation to trigger refetch
-      gcTime: 5 * 60 * 1000, // Keep unused data in cache for 5 minutes
+      staleTime: isElectronEnv ? Infinity : 0,
+      gcTime: isElectronEnv ? 30 * 60 * 1000 : 5 * 60 * 1000,
       retry: false,
+      networkMode: isElectronEnv ? 'always' : 'online',
     },
     mutations: {
       retry: false,
+      networkMode: isElectronEnv ? 'always' : 'online',
     },
   },
 });

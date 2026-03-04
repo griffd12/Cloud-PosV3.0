@@ -115,6 +115,9 @@ class OfflineApiInterceptor {
         /^\/api\/option-flags/,
         /^\/api\/client-ip/,
         /^\/api\/kds-tickets/,
+        /^\/api\/terminal-devices/,
+        /^\/api\/payment-processors/,
+        /^\/api\/sync-notifications/,
       ];
       return readEndpoints.some(re => re.test(pathname));
     }
@@ -237,6 +240,30 @@ class OfflineApiInterceptor {
     const jobCodesDetailsMatch = pathname.match(/^\/api\/employees\/[^/]+\/job-codes\/details$/);
     if (jobCodesDetailsMatch) {
       return { status: 200, data: [] };
+    }
+
+    if (pathname === '/api/terminal-devices' || pathname.match(/^\/api\/terminal-devices/)) {
+      const devices = this.db.getEntityList('payment_terminals', null);
+      const propertyId = query?.propertyId || this.config.propertyId;
+      const filtered = propertyId ? devices.filter(d => d.propertyId === propertyId || d.property_id === propertyId) : devices;
+      return { status: 200, data: filtered };
+    }
+
+    if (pathname === '/api/payment-processors' || pathname.match(/^\/api\/payment-processors/)) {
+      const processors = this.db.getEntityList('payment_processors', null);
+      const propertyId = query?.propertyId || this.config.propertyId;
+      const filtered = propertyId ? processors.filter(p => p.propertyId === propertyId || p.property_id === propertyId) : processors;
+      const activeOnly = query?.active === 'true';
+      const result = activeOnly ? filtered.filter(p => p.active !== false && p.isActive !== false) : filtered;
+      return { status: 200, data: result };
+    }
+
+    if (pathname === '/api/sync-notifications') {
+      return { status: 200, data: [] };
+    }
+
+    if (pathname === '/api/sync-notifications/unread-count') {
+      return { status: 200, data: { count: 0 } };
     }
 
     const entityMap = {

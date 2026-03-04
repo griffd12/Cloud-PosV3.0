@@ -7,10 +7,13 @@
  * - ORANGE mode: Local agents only
  * - RED mode: Browser IndexedDB only
  * 
- * The client automatically detects connectivity and routes requests appropriately.
+ * In Electron, the backend determines the connection mode via real network checks
+ * and sends it via IPC. The frontend trusts the Electron backend's mode determination.
+ * In browser, the client runs its own health checks.
  */
 
-// Cross-browser compatible timeout signal
+import { useState, useEffect } from 'react';
+
 function createTimeoutSignal(ms: number): AbortSignal {
   const controller = new AbortController();
   setTimeout(() => controller.abort(), ms);
@@ -41,21 +44,65 @@ class ApiClient {
   private modeListeners: ((mode: ConnectionMode) => void)[] = [];
   private healthCheckInterval: NodeJS.Timeout | null = null;
   private lastStatus: ModeStatus | null = null;
+  private isElectron: boolean = false;
+  private electronCleanup: (() => void) | null = null;
   
   constructor() {
-    // Default configuration
     this.config = {
-      cloudUrl: '', // Current origin for cloud
+      cloudUrl: '',
       serviceHostUrl: localStorage.getItem('serviceHostUrl') || 'http://service-host.local:3001',
       localPrintAgentUrl: 'http://localhost:3003',
       localPaymentAppUrl: 'http://localhost:3004',
     };
     
-    // Start health checks
-    this.startHealthChecks();
+    this.isElectron = !!(window as any).electronAPI;
+    
+    if (this.isElectron) {
+      this.initElectronMode();
+    } else {
+      this.startHealthChecks();
+    }
   }
   
-  // Configure the client
+  private initElectronMode(): void {
+    const electronAPI = (window as any).electronAPI;
+    
+    const storedMode = localStorage.getItem('connectionMode');
+    if (storedMode && ['green', 'yellow', 'orange', 'red'].includes(storedMode)) {
+      this.setMode(storedMode as ConnectionMode);
+    }
+    
+    if (electronAPI.getConnectionMode) {
+      electronAPI.getConnectionMode().then((mode: string) => {
+        if (mode && ['green', 'yellow', 'orange', 'red'].includes(mode)) {
+          this.setMode(mode as ConnectionMode);
+          this.updateStatusFromElectron(mode as ConnectionMode);
+        }
+      }).catch(() => {});
+    }
+    
+    if (electronAPI.onConnectionMode) {
+      const unsub = electronAPI.onConnectionMode((mode: string) => {
+        if (mode && ['green', 'yellow', 'orange', 'red'].includes(mode)) {
+          this.setMode(mode as ConnectionMode);
+          this.updateStatusFromElectron(mode as ConnectionMode);
+        }
+      });
+      this.electronCleanup = unsub;
+    }
+  }
+  
+  private updateStatusFromElectron(mode: ConnectionMode): void {
+    this.lastStatus = {
+      mode,
+      cloudReachable: mode === 'green',
+      serviceHostReachable: mode === 'green' || mode === 'yellow',
+      printAgentAvailable: mode !== 'red',
+      paymentAppAvailable: mode !== 'red',
+      lastChecked: new Date(),
+    };
+  }
+  
   configure(config: Partial<ApiClientConfig>): void {
     this.config = { ...this.config, ...config };
     if (config.serviceHostUrl) {
@@ -63,17 +110,14 @@ class ApiClient {
     }
   }
   
-  // Get current mode
   getMode(): ConnectionMode {
     return this.currentMode;
   }
   
-  // Get detailed status
   getStatus(): ModeStatus | null {
     return this.lastStatus;
   }
   
-  // Subscribe to mode changes
   onModeChange(callback: (mode: ConnectionMode) => void): () => void {
     this.modeListeners.push(callback);
     return () => {
@@ -81,7 +125,6 @@ class ApiClient {
     };
   }
   
-  // Main request method with automatic failover
   async request<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const baseUrl = this.getBaseUrl();
     
@@ -92,7 +135,7 @@ class ApiClient {
           'Content-Type': 'application/json',
           ...options.headers,
         },
-        signal: createTimeoutSignal(10000), // 10 second timeout
+        signal: createTimeoutSignal(10000),
       });
       
       if (!response.ok) {
@@ -105,12 +148,10 @@ class ApiClient {
     }
   }
   
-  // GET request
   async get<T = any>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'GET' });
   }
   
-  // POST request
   async post<T = any>(endpoint: string, data: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
@@ -118,7 +159,6 @@ class ApiClient {
     });
   }
   
-  // PUT request
   async put<T = any>(endpoint: string, data: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
@@ -126,7 +166,6 @@ class ApiClient {
     });
   }
   
-  // PATCH request
   async patch<T = any>(endpoint: string, data: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
@@ -134,14 +173,11 @@ class ApiClient {
     });
   }
   
-  // DELETE request
   async delete<T = any>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
   
-  // Print request with failover to local agent
   async print(params: PrintParams): Promise<PrintResult> {
-    // Try Service Host first (if in GREEN or YELLOW mode)
     if (this.currentMode === 'green' || this.currentMode === 'yellow') {
       try {
         return await this.request('/api/print/jobs', {
@@ -153,7 +189,6 @@ class ApiClient {
       }
     }
     
-    // Try local Print Agent (ORANGE mode or fallback)
     try {
       const response = await fetch(`${this.config.localPrintAgentUrl}/api/print`, {
         method: 'POST',
@@ -172,9 +207,7 @@ class ApiClient {
     }
   }
   
-  // Payment request with failover to local app
   async authorizePayment(params: PaymentParams): Promise<PaymentResult> {
-    // Try Service Host first
     if (this.currentMode === 'green' || this.currentMode === 'yellow') {
       try {
         return await this.request('/api/payment/authorize', {
@@ -186,14 +219,13 @@ class ApiClient {
       }
     }
     
-    // Try local Payment App (ORANGE mode or fallback)
     if (this.lastStatus?.paymentAppAvailable) {
       try {
         const response = await fetch(`${this.config.localPaymentAppUrl}/api/payment/authorize`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(params),
-          signal: createTimeoutSignal(30000), // 30 second timeout for payments
+          signal: createTimeoutSignal(30000),
         });
         
         if (!response.ok) {
@@ -209,7 +241,6 @@ class ApiClient {
     throw new Error('No payment service available - cash only');
   }
   
-  // Get base URL based on current mode
   private getBaseUrl(): string {
     switch (this.currentMode) {
       case 'green':
@@ -218,18 +249,15 @@ class ApiClient {
       case 'orange':
         return this.config.serviceHostUrl;
       case 'red':
-        // In RED mode, we'll queue operations - return empty to signal offline
         return '';
     }
   }
   
-  // Queue operation for later sync (RED mode)
   async queueForSync(endpoint: string, method: string, body?: any): Promise<string> {
     const { offlineQueue } = await import('./offline-queue');
     return offlineQueue.enqueue(endpoint, method, body);
   }
   
-  // Process queued operations when connectivity returns
   async syncQueuedOperations(): Promise<{ processed: number; failed: number }> {
     if (this.currentMode === 'red') {
       return { processed: 0, failed: 0 };
@@ -251,18 +279,19 @@ class ApiClient {
     });
   }
   
-  // Get count of pending offline operations
   async getPendingOperationsCount(): Promise<number> {
     const { offlineQueue } = await import('./offline-queue');
     return offlineQueue.getPendingCount();
   }
   
-  // Handle request failure with mode switching
   private async handleFailure<T>(endpoint: string, options: RequestInit, error: Error): Promise<T> {
     console.warn(`Request failed in ${this.currentMode} mode:`, error.message);
     
+    if (this.isElectron) {
+      throw error;
+    }
+    
     if (this.currentMode === 'green') {
-      // Try Service Host
       const oldMode = this.currentMode;
       this.setMode('yellow');
       
@@ -282,12 +311,10 @@ class ApiClient {
         
         return response.json();
       } catch (e) {
-        // Service Host also failed
         this.setMode('orange');
         throw new Error('Both cloud and Service Host unavailable');
       }
     } else if (this.currentMode === 'yellow') {
-      // Service Host failed, try to go back to cloud
       try {
         const cloudCheck = await fetch(`${this.config.cloudUrl}/health`, {
           signal: createTimeoutSignal(3000),
@@ -297,7 +324,6 @@ class ApiClient {
           return this.request<T>(endpoint, options);
         }
       } catch {
-        // Cloud still down
       }
       
       this.setMode('orange');
@@ -307,7 +333,6 @@ class ApiClient {
     throw error;
   }
   
-  // Set mode and notify listeners
   private setMode(mode: ConnectionMode): void {
     if (mode !== this.currentMode) {
       console.log(`Connection mode changed: ${this.currentMode} → ${mode}`);
@@ -316,22 +341,25 @@ class ApiClient {
     }
   }
   
-  // Start periodic health checks
   private startHealthChecks(): void {
     this.checkHealth();
-    this.healthCheckInterval = setInterval(() => this.checkHealth(), 30000); // Every 30 seconds
+    this.healthCheckInterval = setInterval(() => this.checkHealth(), 30000);
   }
   
-  // Stop health checks
   stopHealthChecks(): void {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
       this.healthCheckInterval = null;
     }
+    if (this.electronCleanup) {
+      this.electronCleanup();
+      this.electronCleanup = null;
+    }
   }
   
-  // Check connectivity to all services
   private async checkHealth(): Promise<void> {
+    if (this.isElectron) return;
+    
     const status: ModeStatus = {
       mode: this.currentMode,
       cloudReachable: false,
@@ -341,7 +369,6 @@ class ApiClient {
       lastChecked: new Date(),
     };
     
-    // Check cloud
     try {
       const cloudUrl = this.config.cloudUrl || window.location.origin;
       const response = await fetch(`${cloudUrl}/health`, {
@@ -352,7 +379,6 @@ class ApiClient {
       status.cloudReachable = false;
     }
     
-    // Check Service Host
     try {
       const response = await fetch(`${this.config.serviceHostUrl}/health`, {
         signal: createTimeoutSignal(3000),
@@ -362,7 +388,6 @@ class ApiClient {
       status.serviceHostReachable = false;
     }
     
-    // Check Print Agent
     try {
       const response = await fetch(`${this.config.localPrintAgentUrl}/health`, {
         signal: createTimeoutSignal(1000),
@@ -372,7 +397,6 @@ class ApiClient {
       status.printAgentAvailable = false;
     }
     
-    // Check Payment App
     try {
       const response = await fetch(`${this.config.localPaymentAppUrl}/health`, {
         signal: createTimeoutSignal(1000),
@@ -382,7 +406,6 @@ class ApiClient {
       status.paymentAppAvailable = false;
     }
     
-    // Determine mode
     let newMode: ConnectionMode;
     if (status.cloudReachable) {
       newMode = 'green';
@@ -399,14 +422,25 @@ class ApiClient {
     this.setMode(newMode);
   }
   
-  // Force a health check
   async forceHealthCheck(): Promise<ModeStatus> {
+    if (this.isElectron) {
+      const electronAPI = (window as any).electronAPI;
+      if (electronAPI?.getConnectionMode) {
+        try {
+          const mode = await electronAPI.getConnectionMode();
+          if (mode && ['green', 'yellow', 'orange', 'red'].includes(mode)) {
+            this.setMode(mode as ConnectionMode);
+            this.updateStatusFromElectron(mode as ConnectionMode);
+          }
+        } catch {}
+      }
+      return this.lastStatus!;
+    }
     await this.checkHealth();
     return this.lastStatus!;
   }
 }
 
-// Types
 interface PrintParams {
   printerId: string;
   printerIp?: string;
@@ -437,10 +471,8 @@ interface PaymentResult {
   error?: string;
 }
 
-// Singleton instance
 export const apiClient = new ApiClient();
 
-// React hook for connection mode
 export function useConnectionMode(): { 
   mode: ConnectionMode; 
   status: ModeStatus | null;
@@ -467,6 +499,3 @@ export function useConnectionMode(): {
   
   return { mode, status, forceCheck };
 }
-
-// Need to import for the hook
-import { useState, useEffect } from 'react';
