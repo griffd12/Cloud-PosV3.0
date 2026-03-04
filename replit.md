@@ -1,7 +1,7 @@
 # Cloud POS System
 
 ## Overview
-This project is an enterprise cloud-based Point of Sale (POS) system designed for high-volume Quick Service Restaurants (QSRs). It offers a scalable solution with comprehensive administrative configuration and real-time operational features, supporting a multi-property hierarchy and integration with kitchen display systems (KDS). The system includes advanced enterprise functionalities such as fiscal close, cash management, gift cards, loyalty programs, inventory management, forecasting, and online ordering integration. It features a Simphony-class design for configuration inheritance with override capabilities and provides an optional Central Application Processing Service (CAPS) for hybrid cloud/on-premise offline resilience. The system aims to be a flexible and reliable POS for various QSR operations, ensuring continuous service even when offline, and supporting both web and native applications (Android & Windows).
+This project is an enterprise cloud-based Point of Sale (POS) system designed for high-volume Quick Service Restaurants (QSRs). It offers a scalable solution with comprehensive administrative configuration and real-time operational features. The system supports a multi-property hierarchy, integrates with kitchen display systems (KDS), and provides advanced enterprise functionalities including fiscal close, cash management, gift cards, loyalty programs, inventory management, forecasting, and online ordering integration. It features a Simphony-class design for configuration inheritance with override capabilities and offers an optional Central Application Processing Service (CAPS) for hybrid cloud/on-premise offline resilience, ensuring continuous service even when offline. The system supports both web and native applications (Android & Windows).
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -15,7 +15,7 @@ Preferred communication style: Simple, everyday language.
   5. **Logging**: Can we see what happened in the logs when something goes wrong? Every offline request must be logged with method, path, and response status.
   6. **Data sync**: When connectivity restores, will offline operations sync correctly to the cloud? Are they queued properly?
   7. **Error recovery**: What happens if this operation fails? Does the user see a clear error, or does the UI freeze/break silently?
-  Never fix a single symptom in isolation. Always trace the full impact chain.
+Never fix a single symptom in isolation. Always trace the full impact chain.
 
 ## System Architecture
 
@@ -28,37 +28,34 @@ Preferred communication style: Simple, everyday language.
 - **Offline Resilience**: Optional on-premise CAPS with local SQLite for offline operations and cloud synchronization, ensuring an immutable `transaction_journal` for audit trails and exactly-once sync semantics.
 - **Non-Destructive Changes**: System modifications are additive, with new features defaulting to OFF/NULL/false to prevent impact on existing enterprises.
 - **Context Help Requirement**: Every configuration field in EMC panels requires a corresponding entry in the config help text registry for functional descriptions.
+- **WS→CAPS→Cloud Architecture**: All transaction data flows from Workstation (WS) to Central Application Processing Service (CAPS) and then to the Cloud. Cloud sends only configuration data down.
 
 ### Technical Stack
 - **Frontend**: React 18, TypeScript, Vite, Wouter, TanStack React Query, React Context, shadcn/ui, Tailwind CSS.
 - **Backend**: Node.js, Express, TypeScript, RESTful JSON API with WebSocket support.
 - **Database**: PostgreSQL with Drizzle ORM.
-- **Offline Storage**: Browser IndexedDB for client-side offline resilience.
-- **Native Applications**: Capacitor (Android) and Electron (Windows) wrappers for web app deployment.
+- **Offline Storage**: Browser IndexedDB for client-side offline resilience, SQLite/SQLCipher for native applications.
+- **Native Applications**: Capacitor (Android) and Electron (Windows) wrappers.
 
 ### Key Features and Implementations
 - **Device Configuration**: Hierarchical setup for Workstations, Printers, and KDS Devices.
-- **KDS Order Flow**: Supports "Standard Mode" and "Dynamic Order Mode" with real-time updates.
+- **KDS Order Flow**: Supports "Standard Mode" and "Dynamic Order Mode" with real-time updates and EMC-driven routing.
 - **Authentication**: PIN-based employee authentication with role-based access control.
-- **Payment Processing**: PCI-compliant, gateway-agnostic framework with semi-integrated architecture.
+- **Payment Processing**: PCI-compliant, gateway-agnostic framework with semi-integrated architecture and offline capabilities.
 - **Printing System**: Database-backed print queue and standalone Print Agent System.
 - **Enterprise Features**: Fiscal Close, Cash Management, Gift Cards, Loyalty, Online Ordering, Inventory, Forecasting.
 - **Pizza Builder Module**: Visual, full-page interface for pizza customization.
 - **Multi-Enterprise Architecture**: Server-side data isolation with distinct access levels.
-- **Native Application Capabilities (Windows Electron)**: Includes embedded print agent, SQLite/SQLCipher for offline data, local reporting, store-and-forward for offline transactions, EMV terminal communication, auto-launch, kiosk mode, and terminal setup wizard.
+- **Native Application Capabilities (Windows Electron)**: Embedded print agent, SQLite/SQLCipher for offline data, local reporting, store-and-forward for offline transactions, EMV terminal communication, auto-launch, kiosk mode, and terminal setup wizard.
 - **Configuration Inheritance & Override**: Items inherit down the hierarchy with override capabilities tracked via a generic OptionBits system.
 - **Concurrency-Safe Check Numbering**: Atomic check number generation ensuring unique, sequential numbers.
 - **Reporting**: Canonical Data Access Layer with 7 query functions for FOH/BOH reports.
 - **Customer Onboarding Data Import**: Excel-based bulk data import system.
-- **Delivery Platform Integration APIs**: Direct API integrations with Uber Eats, DoorDash, and Grubhub.
-- **Offline Mode Resilience**: Features protocol interceptors, cached HTML/JS/CSS, and robust handling of offline transactions and manager approvals. CAPS auto-discovery and Yellow Mode provide seamless failover, while an immutable transaction journal ensures data integrity during synchronization.
+- **Offline Mode Resilience**: Protocol interceptors, cached HTML/JS/CSS, robust handling of offline transactions and manager approvals, CAPS auto-discovery, Yellow Mode for seamless failover, and immutable transaction journal for data integrity. Includes fixes for offline payment, check, and item handling.
 - **Workstation Identity and RVC Switching**: Workstation ID is locked after setup, and the login screen allows interactive Revenue Center selection.
-- **Device Tracker**: Unified device tracking for both WS and KDS Electron devices, with throttled database writes.
-- **CAPS Service Host Resilience**: Includes mechanisms to ensure critical database tables exist and robust token management for continuous operation.
-- **Offline Database Fixes**: Enhancements for offline payment, check, and item handling, including schema migrations for older databases, check counter reconciliation, atomic check creation retries, and correct configuration parsing for CAPS.
-- **WS→CAPS→Cloud Architecture**: Background sync routes all data through CAPS instead of directly to the cloud, ensuring consistent data flow and resilience. This includes check state synchronization and queuing of non-check operations, with comprehensive API support for various POS functions.
-- **Offline Interceptor Fixes**: Addresses regressions related to modifier handling, open check data retrieval, check reopening, payment processing, and offline check creation.
-- **v3.1.26 Offline/KDS/CAPS Fixes**: Role-based privilege resolution for offline auth (syncs roles + role_privileges from cloud), corrected void/discount response shapes for UI updates, KDS send-to-kitchen CAPS forwarding, activation-config KDS device support, CAPS modifier_groups `code` column migration, and CAPS device tracking headers.
+- **Device Tracker**: Unified device tracking for both WS and KDS Electron devices.
+- **CAPS Service Host Resilience**: Ensures critical database tables exist and robust token management.
+- **Real-time Sync Push Notifications**: Critical sync events (transaction success/failure, CAPS connect/disconnect) trigger push notifications via WebSocket and a notification center UI.
 
 ## External Dependencies
 
@@ -83,43 +80,7 @@ Preferred communication style: Simple, everyday language.
 - FreedomPay (semi_integrated)
 - Eigen (semi_integrated)
 
-### v3.1.27 Changes (March 2026)
-- **Architecture Enforcement**: WS→CAPS→Cloud is the ONLY valid transaction data flow. Cloud sends only config down. Removed `syncFromCloud()` open checks download and disabled `syncToCloud()` dead code.
-- **Credit card 503 fix**: Removed terminal-sessions from interceptor blocks
-- **Roles table fix**: Added roles + role_privileges to offline SQLite init
-- **CAPS send-to-kitchen fix**: v7 schema migration for missing check_items and modifier_groups columns
-- **KDS black screen fix**: propertyId fallback + diagnostic logging + empty state guard
-- **Merge checks fix**: GREEN mode cloud fallthrough
-- **Check 404 reopen/edit fix**: 6 interceptor locations now fall through to cloud in GREEN mode
-- **Checks disappearing fix**: Root cause removal of architecture violation
-- **Split check multi-select**: Set-based multi-item selection and batch move
-
-### v3.1.28 Hotfix (March 2026)
-- **CAPS schema fix**: Added missing `code TEXT` column to modifier_groups CREATE TABLE in CREATE_SCHEMA_SQL, plus missing check_items columns (sent_to_kitchen, sent, discount_id, discount_name, discount_amount, discount_type, modifiers_json). Fresh CAPS databases now get complete schema without needing migration.
-- **GREEN mode interceptor fallthrough**: Fixed main.cjs protocol handler so interceptor `null` returns (GREEN mode fallthrough) reach cloud via `electronNet.fetch()` instead of being queued. Added `request.clone()` before body parsing to preserve request for cloud fallthrough. Only queues operations in YELLOW/RED modes. Fixes merge checks, reopen/edit closed checks, and terminal-sessions in GREEN mode.
-
-### v3.1.29 Changes (March 2026)
-- **CAPS payments table fix**: Added `payments` table to CREATE_SCHEMA_SQL — PaymentController's INSERT no longer crashes with "no such table".
-- **Complete send-to-kitchen rewrite with full EMC routing**: Replaced basic `UPDATE check_items SET sent_to_kitchen=1` with proper EMC-config-driven routing:
-  - Routes items via menu_item.print_class_id → print_class_routing (filtered by RVC) → order_device → order_device_kds → kds_device
-  - Respects RVC settings: dynamicOrderMode, domSendMode (fire_on_fly/fire_on_next/fire_on_tender), kitchenPrintMode
-  - Respects workstation settings: defaultOrderDeviceId, defaultKdsExpoId, workstation_order_devices assignments
-  - Respects order device settings: sendOn (send_button/dynamic), sendVoids, kdsDeviceId controller
-  - Creates separate kds_tickets per KDS device with correct kds_device_id
-  - Creates proper kds_ticket_items records for each ticket
-  - Handles expo stations (expoMode=true devices get ALL items from all stations)
-  - Unrouted items fall back to default order device or catch-all ticket
-- **CAPS WebSocket dual path**: WebSocket server now accepts connections on both `/ws` and `/ws/kds` using noServer mode with manual upgrade handling. KDS devices can now connect to CAPS and receive real-time ticket updates.
-- **Gift card/loyalty GREEN mode fallthrough**: Interceptor returns null (falls through to cloud) for gift-card and loyalty routes in GREEN mode. 503 only in YELLOW/RED modes. Affects 5 handler locations (GET loyalty-members, GET gift-cards, POST gift-cards, POST loyalty, POST pos/loyalty/earn).
-- **8 new CAPS tables**: terminal_sessions, registered_devices, print_jobs, workstation_order_devices, ingredient_prefixes, rvc_counters, break_rules, role_rules — all matching cloud schema.
-- **Config sync for new tables**: Added upsert methods and syncFull/syncDelta integration for workstationOrderDevices, ingredientPrefixes, rvcCounters, breakRules, roleRules.
-
-### v3.1.30 Fixes (March 2026)
-- **KDS 404 fix**: Added `/api/health` alias to CAPS API router (was only at `/health`, causing YELLOW→RED fallback). Added `/api/pos/modifier-map` route to CAPS for KDS modifier data loading.
-- **Send-to-kitchen 400 fix**: Fixed `KdsController.createTicket()` INSERT — added missing `round_number NOT NULL`, changed `station_id` to `kds_device_id`, added `order_device_id` and `table_number`. Fixed `kds_ticket_items` INSERT columns (`modifiers_json`→`modifiers`, `course`→`course_number`).
-- **Check-state sync fix**: Fixed check_items INSERT in CAPS check-state sync — added missing `round_number`, `total_price` (qty×price), `print_class_id`, `sent_to_kitchen` NOT NULL columns.
-- **Split check multi-check fix**: Rewrote `splitCheckOffline()` to create one new check per unique `targetCheckIndex` (was creating single check for all items, ignoring target index).
-- **Credit card terminal session fix**: Added CAPS `/api/terminal-sessions` cloud-proxy routes (POST+GET). CAPS forwards terminal session requests to cloud when connected, returns clear 503 "Credit card processing requires cloud connection" when disconnected.
-- **Payment sync fix**: Added CAPS `/api/payments` POST route for offline payment sync forwarding (was returning 400 due to missing route).
-- **Credit card 500 root cause fix**: Cloud `POST /api/terminal-sessions` was failing with FK violation because POS sends `checkId: "offline_xxx"` but cloud `checks` table uses cloud-generated UUIDs. Added offline-to-cloud check ID resolution via `service_host_transactions` lookup (offline localId → check number + RVC → cloud check ID). Returns clear 400 "Check not yet synced" if resolution fails.
-- **CAPS modifier_groups code column fix**: Added `ensureColumnFixups()` that runs on every CAPS startup — idempotent ALTER TABLE for `modifier_groups.code` and `check_items` columns. Fixes existing databases created before v3.1.28 that were missing these columns.
+### Delivery Platform Integration APIs
+- Uber Eats
+- DoorDash
+- Grubhub
