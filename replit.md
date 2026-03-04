@@ -57,7 +57,7 @@ Never fix a single symptom in isolation. Always trace the full impact chain.
 - **Workstation Identity and RVC Switching**: Workstation ID is locked after setup, and the login screen allows interactive Revenue Center selection.
 - **Device Tracker**: Unified device tracking for both WS and KDS Electron devices.
 - **CAPS Service Host Resilience**: Ensures critical database tables exist and robust token management.
-- **Real-time Sync Push Notifications**: Critical sync events (transaction success/failure, CAPS connect/disconnect) trigger push notifications via WebSocket and a notification center UI.
+- **Real-time Sync Push Notifications**: Critical sync events (transaction success/failure, CAPS connect/disconnect) trigger push notifications via WebSocket and a notification center UI. Server deduplicates CAPS connection notifications (10-min window). Notification panel has visible read/unread dots, Clear All button, auto-mark-read on open, and plain-language messages.
 
 ## External Dependencies
 
