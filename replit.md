@@ -52,6 +52,8 @@ Never fix a single symptom in isolation. Always trace the full impact chain.
 - **Reporting**: Canonical Data Access Layer with 7 query functions for FOH/BOH reports.
 - **Customer Onboarding Data Import**: Excel-based bulk data import system.
 - **Offline Mode Resilience**: Protocol interceptors, cached HTML/JS/CSS, robust handling of offline transactions and manager approvals, CAPS auto-discovery, Yellow Mode for seamless failover, and immutable transaction journal for data integrity. Includes fixes for offline payment, check, and item handling.
+- **Send-to-Kitchen Architecture**: Interceptor handles Send locally first, then pre-syncs the check to CAPS before forwarding the send-to-kitchen request. CAPS handler has retry logic (3x, 500ms) if check hasn't arrived yet. `sendToKitchen()` uses EMC routing (menu item → print class → order device → KDS device) and creates KDS tickets internally.
+- **CAPS Column Fixups**: `ensureColumnFixups()` uses `db.exec()` for ALTER TABLE DDL with error logging and post-fixup verification via PRAGMA table_info.
 - **Workstation Identity and RVC Switching**: Workstation ID is locked after setup, and the login screen allows interactive Revenue Center selection.
 - **Device Tracker**: Unified device tracking for both WS and KDS Electron devices.
 - **CAPS Service Host Resilience**: Ensures critical database tables exist and robust token management.
