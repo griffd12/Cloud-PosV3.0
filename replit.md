@@ -51,11 +51,22 @@ Never fix a single symptom in isolation. Always trace the full impact chain.
 - **Concurrency-Safe Check Numbering**: Atomic check number generation ensuring unique, sequential numbers.
 - **Reporting**: Canonical Data Access Layer with 7 query functions for FOH/BOH reports.
 - **Customer Onboarding Data Import**: Excel-based bulk data import system.
-- **Offline Mode Resilience**: Protocol interceptors, cached HTML/JS/CSS, robust handling of offline transactions and manager approvals, CAPS auto-discovery, Yellow Mode for seamless failover, and immutable transaction journal for data integrity. Includes fixes for offline payment, check, and item handling.
+- **Offline Mode Resilience**: Protocol interceptors, cached HTML/JS/CSS, robust handling of offline transactions and manager approvals, CAPS auto-discovery, Yellow Mode for seamless failover, and immutable transaction journal for data integrity. Includes fixes for offline payment, check, and item handling. v3.1.33: Frontend uses Electron IPC (`onConnectionMode`) for connection state instead of own health checks; Vite HMR/WebSocket blocked when offline; TanStack Query configured with `staleTime: Infinity` and `networkMode: 'always'` in Electron; connectivity hysteresis (2 consecutive checks) prevents mode flip-flopping; `/health` returns 503 when offline (never served from page cache); terminal-devices and payment-processors have offline handlers (EMV terminals always visible in all modes). v3.1.34: KDS WebSocket adapts to connection mode (GREEN=cloud, YELLOW=CAPS `/ws/kds`, RED=skip with 10s retry); CAPS auth bypassed for GET KDS read paths (`/kds-tickets`, `/kds-devices`, `/terminal-devices`, `/payment-processors`, etc.) and accepts `x-device-token` header; offline sync expanded from ~37 to 48+ config tables including tax_groups, enterprises, job_codes, privileges, loyalty_programs, loyalty_rewards, gift_cards, employee_assignments, workstation_order_devices, workstation_service_bindings, registered_devices, item_availability, break_rules, fiscal_periods, cash_drawers, drawer_assignments, descriptor_sets; new sync API endpoints for employee-assignments, workstation-service-bindings, workstation-order-devices; SQLite offline schema expanded with 17 new config tables using JSON-blob storage pattern.
+- **Send-to-Kitchen Architecture**: Interceptor handles Send locally first, then pre-syncs the check to CAPS before forwarding the send-to-kitchen request. CAPS handler has retry logic (3x, 500ms) if check hasn't arrived yet. `sendToKitchen()` uses EMC routing (menu item → print class → order device → KDS device) and creates KDS tickets internally.
+- **CAPS Column Fixups**: `ensureColumnFixups()` uses `db.exec()` for ALTER TABLE DDL with error logging and post-fixup verification via PRAGMA table_info.
 - **Workstation Identity and RVC Switching**: Workstation ID is locked after setup, and the login screen allows interactive Revenue Center selection.
 - **Device Tracker**: Unified device tracking for both WS and KDS Electron devices.
 - **CAPS Service Host Resilience**: Ensures critical database tables exist and robust token management.
-- **Real-time Sync Push Notifications**: Critical sync events (transaction success/failure, CAPS connect/disconnect) trigger push notifications via WebSocket and a notification center UI.
+- **Real-time Sync Push Notifications**: Critical sync events (transaction success/failure, CAPS connect/disconnect) trigger push notifications via WebSocket and a notification center UI. Server deduplicates CAPS connection notifications (10-min window). Notification panel has visible read/unread dots, Clear All button, auto-mark-read on open, and plain-language messages.
+
+## Bug Fixes Applied
+- **Currency Precision**: Service-host `recalculateTotals` now uses integer cents math via `toCents`/`fromCents` helpers to eliminate floating-point rounding errors in check totals.
+- **Service Charge Totals**: Service charge add/void routes now use centralized `recalculateCheckTotals()` which includes service charge amounts and tax in the check total calculation.
+- **Item Availability Rollback**: Failed add-item operations now call `/api/item-availability/increment` to revert the optimistic quantity decrement, with a corresponding new storage method and API route.
+- **Void Idempotency**: `voidItem` in CAPS service returns early if an item is already voided, preventing duplicate journal entries.
+- **Check Lock Cleanup**: POS page now releases check locks on `beforeunload` (via `sendBeacon`) and component unmount to prevent lock leaks on navigation.
+- **Inactivity Logout Guard**: Inactivity logout timer is paused when the payment modal is open to avoid logging out during active transactions.
+- **Order Device Routing Guard**: Workstation form prevents saving before order device routing data has loaded, avoiding accidental wipe of existing routing assignments.
 
 ## External Dependencies
 
