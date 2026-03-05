@@ -2522,6 +2522,56 @@ export class Database {
     this.run(`DELETE FROM ${tableName}`);
   }
   
+  clearTransactionalData(): { tablesCleared: string[]; errors: string[] } {
+    const transactionalTables = [
+      'kds_ticket_items',
+      'kds_tickets',
+      'check_payments',
+      'check_discounts',
+      'check_service_charges',
+      'check_items',
+      'rounds',
+      'refund_payments',
+      'refund_items',
+      'refunds',
+      'payment_transactions',
+      'terminal_sessions',
+      'checks',
+      'transaction_journal',
+      'fiscal_periods',
+      'cash_transactions',
+      'drawer_assignments',
+      'safe_counts',
+      'audit_logs',
+      'time_punches',
+      'break_sessions',
+      'gift_card_transactions',
+      'gift_cards',
+      'loyalty_transactions',
+      'loyalty_redemptions',
+      'item_availability',
+      'online_orders',
+      'offline_order_queue',
+      'sync_queue',
+    ];
+
+    const tablesCleared: string[] = [];
+    const errors: string[] = [];
+
+    for (const table of transactionalTables) {
+      try {
+        this.run(`DELETE FROM ${table}`);
+        tablesCleared.push(table);
+      } catch (e: any) {
+        if (!e.message?.includes('no such table')) {
+          errors.push(`${table}: ${e.message}`);
+        }
+      }
+    }
+
+    return { tablesCleared, errors };
+  }
+
   getTableRowCount(tableName: string): number {
     const row = this.get<{ count: number }>(`SELECT COUNT(*) as count FROM ${tableName}`);
     return row?.count ?? 0;

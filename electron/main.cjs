@@ -1020,6 +1020,48 @@ function setupIpcHandlers() {
   ipcMain.handle('get-online-status', () => isOnline);
   ipcMain.handle('get-connection-mode', () => connectionMode);
 
+  ipcMain.handle('clear-offline-sales-data', () => {
+    appLogger.info('App', 'Clearing offline sales data (sales_data_cleared event received)');
+    try {
+      if (offlineDb) {
+        const tables = ['offline_queue', 'offline_payments', 'offline_checks'];
+        for (const table of tables) {
+          try {
+            offlineDb.exec(`DELETE FROM ${table}`);
+            appLogger.info('App', `Cleared offline table: ${table}`);
+          } catch (e) {
+            appLogger.warn('App', `Could not clear offline table ${table}: ${e.message}`);
+          }
+        }
+      }
+      if (enhancedOfflineDb) {
+        try {
+          if (enhancedOfflineDb.clearFailedOperations) {
+            enhancedOfflineDb.clearFailedOperations();
+            appLogger.info('App', 'Cleared enhanced offline DB failed operations');
+          }
+          if (enhancedOfflineDb.db && enhancedOfflineDb.usingSqlite) {
+            const saleTables = ['offline_checks', 'offline_payments', 'offline_queue', 'pending_operations'];
+            for (const t of saleTables) {
+              try {
+                enhancedOfflineDb.db.exec(`DELETE FROM ${t}`);
+                appLogger.info('App', `Cleared enhanced offline table: ${t}`);
+              } catch (e) {
+                appLogger.warn('App', `Enhanced offline table ${t} not found or empty: ${e.message}`);
+              }
+            }
+          }
+        } catch (e) {
+          appLogger.warn('App', `Could not clear enhanced offline DB: ${e.message}`);
+        }
+      }
+      return { success: true };
+    } catch (e) {
+      appLogger.error('App', `Failed to clear offline sales data: ${e.message}`);
+      return { success: false, error: e.message };
+    }
+  });
+
   ipcMain.handle('rotate-logs-business-date', (event, businessDate) => {
     appLogger.info('LogRotation', `Business date rollover: archiving logs for ${businessDate}`);
     const { rotateLogsForBusinessDate } = require('./logger.cjs');

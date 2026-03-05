@@ -377,6 +377,23 @@ function handlePosEvent(event: PosEvent) {
       kdsTestTicketListeners.forEach(listener => listener(event.payload));
       break;
 
+    case "sales_data_cleared":
+      console.log("[WebSocket] Sales data cleared for property:", event.payload?.propertyId);
+      if ((window as any).electronAPI?.clearOfflineSalesData) {
+        (window as any).electronAPI.clearOfflineSalesData();
+      }
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = getKeyString(query.queryKey[0]);
+          return key.includes("/api/checks") ||
+            key.includes("/api/reports") ||
+            key.includes("/api/sales-summary") ||
+            key.includes("/api/fiscal") ||
+            key.includes("/api/kds");
+        }
+      });
+      break;
+
     case "BUSINESS_DATE_ROLLOVER":
       console.log("[WebSocket] Business date rollover:", event.payload);
       if ((window as any).electronAPI?.rotateLogsForBusinessDate && event.payload?.closedBusinessDate) {

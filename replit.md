@@ -59,6 +59,11 @@ Never fix a single symptom in isolation. Always trace the full impact chain.
 - **CAPS Service Host Resilience**: Ensures critical database tables exist and robust token management.
 - **Real-time Sync Push Notifications**: Critical sync events (transaction success/failure, CAPS connect/disconnect) trigger push notifications via WebSocket and a notification center UI. Server deduplicates CAPS connection notifications (10-min window). Notification panel has visible read/unread dots, Clear All button, auto-mark-read on open, and plain-language messages.
 
+## Clear Sales Data Propagation
+- **Cloud**: `clearSalesData` API clears PostgreSQL, then broadcasts `SALES_DATA_CLEARED` to connected service hosts and `sales_data_cleared` POS event to all browser/Electron clients.
+- **CAPS Service Host**: Handles `SALES_DATA_CLEARED` WebSocket message by calling `db.clearTransactionalData()` which purges checks, payments, rounds, KDS tickets, transaction journal, fiscal periods, cash transactions, drawer assignments, audit logs, time punches, refunds, gift card transactions, loyalty transactions, item availability, online orders, and sync queue from local SQLite.
+- **Electron**: Frontend WebSocket handler forwards `sales_data_cleared` event via IPC (`clear-offline-sales-data`) to main process, which clears both `offlineDb` (offline_queue, offline_payments, offline_checks) and `enhancedOfflineDb` (failed operations + SQLite tables). Also invalidates TanStack Query cache for checks, reports, sales-summary, fiscal, and KDS queries.
+
 ## Bug Fixes Applied
 - **Currency Precision**: Service-host `recalculateTotals` now uses integer cents math via `toCents`/`fromCents` helpers to eliminate floating-point rounding errors in check totals.
 - **Service Charge Totals**: Service charge add/void routes now use centralized `recalculateCheckTotals()` which includes service charge amounts and tax in the check total calculation.

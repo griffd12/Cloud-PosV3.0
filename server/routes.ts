@@ -7843,6 +7843,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // Perform the deletion (wrapped in transaction inside storage method)
       const result = await storage.clearSalesData(propertyId);
       
+      // Notify connected service hosts to clear their local transactional data
+      for (const [shId, conn] of connectedServiceHosts.entries()) {
+        if (conn.propertyId === propertyId && conn.ws.readyState === WebSocket.OPEN) {
+          conn.ws.send(JSON.stringify({
+            type: 'SALES_DATA_CLEARED',
+            propertyId,
+            timestamp: new Date().toISOString(),
+          }));
+          console.log(`[clear-sales] Sent SALES_DATA_CLEARED to service host ${shId}`);
+        }
+      }
+
+      // Notify connected POS clients to refresh their state
+      broadcastPosEvent({
+        type: 'sales_data_cleared',
+        payload: { propertyId },
+      }, 'all');
+      
       // Create audit log entry for this action (recorded AFTER clearing)
       await storage.createAuditLog({
         rvcId: null,
