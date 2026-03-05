@@ -66,10 +66,6 @@ class OfflineApiInterceptor {
     return this.serviceHostUrl;
   }
 
-  setConnectionMode(mode) {
-    this._connectionMode = mode;
-  }
-
   _isCheckEndpoint(pathname) {
     return /^\/api\/(checks|check-items|check-payments|check-discounts|check-service-charges|payments)(\/|$)/.test(pathname) ||
            /^\/api\/pos\/(checks|process-card-payment|capture-with-tip)/.test(pathname);
