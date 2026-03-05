@@ -404,6 +404,19 @@ class ServiceHost {
       await this.configSync.syncFull();
       console.log('Configuration synced from cloud');
       
+      this.cloudConnection.onMessage('SALES_DATA_CLEARED', (data) => {
+        console.log('[CAPS] Received SALES_DATA_CLEARED from cloud, clearing local transactional data...');
+        try {
+          const result = this.db.clearTransactionalData();
+          console.log(`[CAPS] Local transactional data cleared: ${result.tablesCleared.length} tables`);
+          if (result.errors.length > 0) {
+            console.warn('[CAPS] Some tables had errors during clear:', result.errors);
+          }
+        } catch (e) {
+          console.error('[CAPS] Failed to clear local transactional data:', (e as Error).message);
+        }
+      });
+      
       // Start CAL deployment sync
       await this.calSync.start();
       console.log('CAL deployment sync started');

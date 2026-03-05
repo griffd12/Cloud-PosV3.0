@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { queryClient, getAuthHeaders } from "@/lib/queryClient";
 import { getDeviceToken } from "@/hooks/use-device-enrollment";
+import { apiClient } from "@/lib/api-client";
 
 interface PosEvent {
   type: string;
@@ -29,7 +30,6 @@ interface PosEvent {
   };
 }
 
-// Global event listeners for test tickets
 const kdsTestTicketListeners: Set<(payload: PosEvent['payload']) => void> = new Set();
 
 export function subscribeToKdsTestTicket(callback: (payload: PosEvent['payload']) => void) {
@@ -48,8 +48,32 @@ export function usePosWebSocket() {
     const connect = () => {
       if (isUnmountedRef.current) return;
       
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws/kds`;
+      const currentMode = apiClient.getMode();
+      if (currentMode === 'red') {
+        reconnectTimeoutRef.current = setTimeout(connect, 10000);
+        return;
+      }
+      
+      let wsUrl: string;
+      if (currentMode === 'yellow') {
+        const serviceHostUrl = localStorage.getItem('serviceHostUrl');
+        if (serviceHostUrl) {
+          try {
+            const shUrl = new URL(serviceHostUrl);
+            const wsProtocol = shUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsUrl = `${wsProtocol}//${shUrl.host}/ws/kds`;
+          } catch {
+            reconnectTimeoutRef.current = setTimeout(connect, 10000);
+            return;
+          }
+        } else {
+          reconnectTimeoutRef.current = setTimeout(connect, 10000);
+          return;
+        }
+      } else {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        wsUrl = `${protocol}//${window.location.host}/ws/kds`;
+      }
       
       try {
         const ws = new WebSocket(wsUrl);
@@ -60,7 +84,6 @@ export function usePosWebSocket() {
             ws.close();
             return;
           }
-          // Include device token for authentication
           const deviceToken = getDeviceToken();
           ws.send(JSON.stringify({ 
             type: "subscribe", 
@@ -82,7 +105,9 @@ export function usePosWebSocket() {
         ws.onclose = () => {
           wsRef.current = null;
           if (!isUnmountedRef.current) {
-            reconnectTimeoutRef.current = setTimeout(connect, 2000);
+            const mode = apiClient.getMode();
+            const delay = mode === 'green' ? 2000 : 10000;
+            reconnectTimeoutRef.current = setTimeout(connect, delay);
           }
         };
 
@@ -93,15 +118,33 @@ export function usePosWebSocket() {
       } catch (error) {
         console.error("Failed to connect WebSocket:", error);
         if (!isUnmountedRef.current) {
-          reconnectTimeoutRef.current = setTimeout(connect, 2000);
+          const mode = apiClient.getMode();
+          const delay = mode === 'green' ? 2000 : 10000;
+          reconnectTimeoutRef.current = setTimeout(connect, delay);
         }
       }
     };
+
+    const modeUnsub = apiClient.onModeChange((newMode) => {
+      if (newMode === 'red') {
+        if (wsRef.current) {
+          wsRef.current.close();
+          wsRef.current = null;
+        }
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
+        }
+      } else if (!wsRef.current && !reconnectTimeoutRef.current) {
+        connect();
+      }
+    });
 
     connect();
 
     return () => {
       isUnmountedRef.current = true;
+      modeUnsub();
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
@@ -299,7 +342,6 @@ function handlePosEvent(event: PosEvent) {
       break;
 
     case "availability_update":
-      // Invalidate item availability queries for real-time sync across all terminals
       if (event.payload?.propertyId) {
         queryClient.invalidateQueries({
           queryKey: ["/api/item-availability", event.payload.propertyId]
@@ -314,7 +356,6 @@ function handlePosEvent(event: PosEvent) {
       break;
 
     case "time_punch_update":
-      // Invalidate time punch queries for real-time sync
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = getKeyString(query.queryKey[0]);
@@ -324,7 +365,6 @@ function handlePosEvent(event: PosEvent) {
       break;
 
     case "timecard_update":
-      // Invalidate timecard queries for real-time sync
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = getKeyString(query.queryKey[0]);
@@ -334,8 +374,24 @@ function handlePosEvent(event: PosEvent) {
       break;
 
     case "kds_test_ticket":
-      // Notify all listeners about test ticket
       kdsTestTicketListeners.forEach(listener => listener(event.payload));
+      break;
+
+    case "sales_data_cleared":
+      console.log("[WebSocket] Sales data cleared for property:", event.payload?.propertyId);
+      if ((window as any).electronAPI?.clearOfflineSalesData) {
+        (window as any).electronAPI.clearOfflineSalesData();
+      }
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = getKeyString(query.queryKey[0]);
+          return key.includes("/api/checks") ||
+            key.includes("/api/reports") ||
+            key.includes("/api/sales-summary") ||
+            key.includes("/api/fiscal") ||
+            key.includes("/api/kds");
+        }
+      });
       break;
 
     case "BUSINESS_DATE_ROLLOVER":
@@ -365,14 +421,11 @@ function handlePosEvent(event: PosEvent) {
       break;
 
     case "device_reload":
-      // Remote reload command from EMC
       console.log("[WebSocket] Received reload command:", event.payload);
-      // Notify all reload listeners
       deviceReloadListeners.forEach(listener => listener(event.payload));
       break;
 
     case "device_reload_all":
-      // Reload all devices (optionally scoped by property)
       console.log("[WebSocket] Received reload all command:", event.payload);
       deviceReloadAllListeners.forEach(listener => listener(event.payload));
       break;
@@ -382,7 +435,6 @@ function handlePosEvent(event: PosEvent) {
   }
 }
 
-// Global event listeners for sync notifications
 const syncNotificationListeners: Set<(payload: PosEvent['payload']) => void> = new Set();
 
 export function subscribeToSyncNotifications(callback: (payload: PosEvent['payload']) => void) {
@@ -390,10 +442,8 @@ export function subscribeToSyncNotifications(callback: (payload: PosEvent['paylo
   return () => { syncNotificationListeners.delete(callback); };
 }
 
-// Global event listeners for targeted device reload commands
 const deviceReloadListeners: Set<(payload: PosEvent['payload']) => void> = new Set();
 
-// Global event listeners for reload-all commands
 const deviceReloadAllListeners: Set<(payload: PosEvent['payload']) => void> = new Set();
 
 export function subscribeToDeviceReload(callback: (payload: PosEvent['payload']) => void) {

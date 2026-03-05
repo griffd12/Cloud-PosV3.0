@@ -31,6 +31,9 @@ let capsConfig = null;
 let localDbHealthy = true;
 let pendingSyncCount = 0;
 let lastSyncAt = null;
+let connectivityFailCount = 0;
+let connectivitySuccessCount = 0;
+const HYSTERESIS_THRESHOLD = 2;
 let lastSyncError = null;
 let backgroundSyncTimer = null;
 
@@ -515,7 +518,18 @@ async function checkConnectivity() {
     }
 
     if (isOnline) {
-      setConnectionMode('green');
+      connectivityFailCount = 0;
+      connectivitySuccessCount++;
+      if (connectionMode !== 'green') {
+        if (connectivitySuccessCount >= HYSTERESIS_THRESHOLD) {
+          setConnectionMode('green');
+          connectivitySuccessCount = 0;
+        } else {
+          appLogger.info('Network', `Cloud reachable (${connectivitySuccessCount}/${HYSTERESIS_THRESHOLD} checks) — waiting for stable connection`);
+        }
+      } else {
+        setConnectionMode('green');
+      }
     } else {
       appLogger.warn('Network', `Cloud DB probe failed (HTTP ${response.status}) — cloud reachable but DB unhealthy`);
       throw new Error('DB probe failed — cloud DB not functional');
@@ -527,6 +541,14 @@ async function checkConnectivity() {
       triggerBackgroundSync();
     }
   } catch (e) {
+    connectivitySuccessCount = 0;
+    connectivityFailCount++;
+    
+    if (connectionMode === 'green' && connectivityFailCount < HYSTERESIS_THRESHOLD) {
+      appLogger.info('Network', `Cloud unreachable (${connectivityFailCount}/${HYSTERESIS_THRESHOLD} failures) — waiting before switching mode`);
+      return;
+    }
+
     const wasOnline = isOnline;
     isOnline = false;
     if (offlineInterceptor) {
@@ -997,6 +1019,27 @@ function setupIpcHandlers() {
 
   ipcMain.handle('get-online-status', () => isOnline);
   ipcMain.handle('get-connection-mode', () => connectionMode);
+
+  ipcMain.handle('clear-offline-sales-data', () => {
+    appLogger.info('App', 'Clearing offline sales data (sales_data_cleared event received)');
+    try {
+      if (offlineDb) {
+        const tables = ['offline_queue', 'offline_payments', 'offline_checks'];
+        for (const table of tables) {
+          try {
+            offlineDb.exec(`DELETE FROM ${table}`);
+            appLogger.info('App', `Cleared offline table: ${table}`);
+          } catch (e) {
+            appLogger.warn('App', `Could not clear offline table ${table}: ${e.message}`);
+          }
+        }
+      }
+      return { success: true };
+    } catch (e) {
+      appLogger.error('App', `Failed to clear offline sales data: ${e.message}`);
+      return { success: false, error: e.message };
+    }
+  });
 
   ipcMain.handle('rotate-logs-business-date', (event, businessDate) => {
     appLogger.info('LogRotation', `Business date rollover: archiving logs for ${businessDate}`);
@@ -2601,6 +2644,20 @@ function registerProtocolInterceptor() {
     try { serverHost = new URL(serverUrl).hostname; } catch { return electronNet.fetch(request, { bypassCustomProtocolHandlers: true }); }
 
     if (url.hostname !== serverHost) {
+      return electronNet.fetch(request, { bypassCustomProtocolHandlers: true });
+    }
+
+    if (!isOnline && (url.pathname === '/__vite_hmr' || url.pathname.startsWith('/@vite/') || url.pathname.startsWith('/@react-refresh'))) {
+      return new Response('', { status: 204, headers: { 'Content-Type': 'text/plain' } });
+    }
+
+    if (url.pathname === '/health' || url.pathname === '/api/health/db-probe') {
+      if (!isOnline) {
+        return new Response(JSON.stringify({ status: 'offline', offline: true, timestamp: new Date().toISOString() }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json', 'X-Offline-Mode': 'true' },
+        });
+      }
       return electronNet.fetch(request, { bypassCustomProtocolHandlers: true });
     }
 
