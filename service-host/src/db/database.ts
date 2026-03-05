@@ -692,12 +692,12 @@ export class Database {
   upsertModifierGroup(mg: any): void {
     this.run(
       `INSERT OR REPLACE INTO modifier_groups (
-        id, enterprise_id, property_id, name, code, selection_type,
-        min_selections, max_selections, display_order, active, updated_at
+        id, enterprise_id, property_id, name, code, required,
+        min_select, max_select, display_order, active, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
       [
         mg.id, mg.enterpriseId, mg.propertyId, mg.name, mg.code,
-        mg.selectionType || 'optional', mg.minSelections || 0, mg.maxSelections,
+        mg.required ? 1 : 0, mg.minSelect || mg.minSelections || 0, mg.maxSelect || mg.maxSelections || 99,
         mg.displayOrder || 0, mg.active !== false ? 1 : 0
       ]
     );

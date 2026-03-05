@@ -2842,6 +2842,62 @@ function registerProtocolInterceptor() {
         triggerBackgroundSync();
       }
 
+      if (response.ok && isApiRequest && /^\/api\/checks/.test(url.pathname) && request.method !== 'GET' && connectionMode === 'green') {
+        const capsUrl = getCapsServiceHostUrl();
+        if (capsUrl) {
+          const warmClone = response.clone();
+          (async () => {
+            try {
+              const contentType = warmClone.headers.get('content-type') || '';
+              if (!contentType.includes('json')) return;
+              const responseData = await warmClone.json();
+              let checkId = null;
+              const checkIdMatch = url.pathname.match(/^\/api\/checks\/([^/]+)/);
+              if (checkIdMatch) {
+                checkId = checkIdMatch[1];
+              } else if (responseData && responseData.id) {
+                checkId = responseData.id;
+              } else if (responseData && responseData.check && responseData.check.id) {
+                checkId = responseData.check.id;
+              }
+              if (!checkId) return;
+              const cloudBaseUrl = request.url.replace(url.pathname + url.search, '');
+              const warmHeaders = {};
+              for (const [key, value] of request.headers.entries()) {
+                if (key.toLowerCase() !== 'host' && key.toLowerCase() !== 'content-type' && key.toLowerCase() !== 'content-length') {
+                  warmHeaders[key] = value;
+                }
+              }
+              const fullCheckResp = await electronNet.fetch(`${cloudBaseUrl}/api/checks/${checkId}`, {
+                headers: warmHeaders,
+                bypassCustomProtocolHandlers: true,
+                signal: AbortSignal.timeout(4000),
+              });
+              if (!fullCheckResp.ok) {
+                appLogger.warn('Interceptor', `GREEN->CAPS warm sync: cloud GET /api/checks/${checkId} returned ${fullCheckResp.status}`);
+                return;
+              }
+              const fullData = await fullCheckResp.json();
+              const checkState = fullData.check ? { ...fullData.check, items: fullData.items || [], payments: fullData.payments || [] } : responseData;
+              if (!checkState.id) return;
+              const syncHeaders = { 'Content-Type': 'application/json' };
+              const warmConfig = loadConfig();
+              if (warmConfig.serviceHostToken) syncHeaders['x-workstation-token'] = warmConfig.serviceHostToken;
+              if (warmConfig.deviceId) syncHeaders['x-workstation-id'] = warmConfig.deviceId;
+              const syncResp = await fetch(`${capsUrl}/api/caps/sync/check-state`, {
+                method: 'POST',
+                headers: syncHeaders,
+                body: JSON.stringify(checkState),
+                signal: AbortSignal.timeout(5000),
+              });
+              appLogger.info('Interceptor', `GREEN->CAPS warm sync: check ${checkId} (${(checkState.items || []).length} items) -> ${syncResp.status}`);
+            } catch (warmErr) {
+              appLogger.warn('Interceptor', `GREEN->CAPS warm sync failed: ${warmErr.message}`);
+            }
+          })();
+        }
+      }
+
       return response;
     } catch (networkError) {
       if (isOnline) {
