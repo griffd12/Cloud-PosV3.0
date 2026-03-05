@@ -332,6 +332,8 @@ export class CapsService {
     
     const item = check.items.find(i => i.id === itemId);
     
+    if (item?.voided) return;
+    
     this.db.run(
       'UPDATE check_items SET voided = 1, void_reason = ? WHERE id = ? AND check_id = ?',
       [reason, itemId, checkId]
@@ -540,22 +542,22 @@ export class CapsService {
       [checkId]
     );
     
-    let subtotal = 0;
-    let totalTax = 0;
+    let subtotalCents = 0;
+    let totalTaxCents = 0;
     
     for (const item of items) {
-      const lineTotal = item.quantity * item.unit_price;
-      subtotal += lineTotal;
+      const lineTotalCents = this.db.toCents(item.quantity * item.unit_price);
+      subtotalCents += lineTotalCents;
       
       if (item.tax_group_id) {
         const taxGroup = this.db.getTaxGroup(item.tax_group_id);
         if (taxGroup) {
           const rate = parseFloat(taxGroup.rate) || 0;
           if (taxGroup.tax_mode === 'inclusive') {
-            const taxPortion = Math.round(lineTotal - (lineTotal / (1 + rate)));
-            totalTax += taxPortion;
+            const taxPortionCents = Math.round(lineTotalCents - (lineTotalCents / (1 + rate)));
+            totalTaxCents += taxPortionCents;
           } else {
-            totalTax += Math.round(lineTotal * rate);
+            totalTaxCents += Math.round(lineTotalCents * rate);
           }
         }
       }
@@ -565,18 +567,26 @@ export class CapsService {
       `SELECT COALESCE(SUM(amount), 0) as total FROM check_discounts WHERE check_id = ? AND voided = 0`,
       [checkId]
     );
-    const discountTotal = discountResult?.total || 0;
+    const discountTotalCents = this.db.toCents(discountResult?.total || 0);
     
     const serviceChargeResult = this.db.get<{ total: number }>(
       `SELECT COALESCE(SUM(amount), 0) as total FROM check_service_charges WHERE check_id = ? AND voided = 0`,
       [checkId]
     );
-    const serviceChargeTotal = serviceChargeResult?.total || 0;
+    const serviceChargeTotalCents = this.db.toCents(serviceChargeResult?.total || 0);
     
-    const total = Math.max(0, subtotal + totalTax - discountTotal + serviceChargeTotal);
+    const totalCents = Math.max(0, subtotalCents + totalTaxCents - discountTotalCents + serviceChargeTotalCents);
     
     const totalPayments = this.getTotalPayments(checkId);
-    const amountDue = Math.max(0, total - totalPayments);
+    const totalPaymentsCents = this.db.toCents(totalPayments);
+    const amountDueCents = Math.max(0, totalCents - totalPaymentsCents);
+    
+    const subtotal = parseFloat(this.db.fromCents(subtotalCents));
+    const totalTax = parseFloat(this.db.fromCents(totalTaxCents));
+    const discountTotal = parseFloat(this.db.fromCents(discountTotalCents));
+    const serviceChargeTotal = parseFloat(this.db.fromCents(serviceChargeTotalCents));
+    const total = parseFloat(this.db.fromCents(totalCents));
+    const amountDue = parseFloat(this.db.fromCents(amountDueCents));
     
     this.db.run(
       `UPDATE checks SET subtotal = ?, tax = ?, discount_total = ?, service_charge_total = ?, total = ?, amount_due = ? WHERE id = ?`,

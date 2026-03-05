@@ -768,14 +768,21 @@ async function recalculateCheckTotals(checkId: string): Promise<void> {
   
   const totalDiscounts = itemDiscountTotal + checkLevelDiscountTotal;
 
+  const allServiceCharges = await storage.getCheckServiceChargesByCheck(checkId);
+  const activeServiceCharges = allServiceCharges.filter((c: any) => !c.voided);
+  const serviceChargeTotal = activeServiceCharges.reduce((sum: number, c: any) => sum + parseFloat(c.amount || "0"), 0);
+  const serviceChargeTax = activeServiceCharges.reduce((sum: number, c: any) => sum + parseFloat(c.taxAmount || "0"), 0);
+
   const subtotal = Math.round(grossSubtotal * 100) / 100;
-  const tax = Math.max(0, Math.round(addOnTax * 100) / 100);
-  const total = Math.max(0, Math.round((netSubtotal + tax) * 100) / 100);
+  const tax = Math.max(0, Math.round((addOnTax + serviceChargeTax) * 100) / 100);
+  const scTotal = Math.round(serviceChargeTotal * 100) / 100;
+  const total = Math.max(0, Math.round((netSubtotal + tax + scTotal) * 100) / 100);
 
   await storage.updateCheck(checkId, {
     subtotal: subtotal.toFixed(2),
     taxTotal: tax.toFixed(2),
     discountTotal: totalDiscounts.toFixed(2),
+    serviceChargeTotal: scTotal.toFixed(2),
     total: total.toFixed(2),
   });
 }
@@ -4709,20 +4716,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       originDeviceId: req.body.originDeviceId || null,
     });
 
-    const allCharges = await storage.getCheckServiceChargesByCheck(check.id);
-    const activeCharges = allCharges.filter(c => !c.voided);
-    const scTotal = activeCharges.reduce((sum, c) => sum + parseFloat(c.amount), 0);
-    const scTaxTotal = activeCharges.reduce((sum, c) => sum + parseFloat(c.taxAmount || "0"), 0);
-    
-    const checkItems = await storage.getCheckItems(check.id);
-    const itemTax = checkItems
-      .filter(i => !i.voided)
-      .reduce((sum, i) => sum + parseFloat(i.taxAmount || "0"), 0);
-    
-    await storage.updateCheck(check.id, {
-      serviceChargeTotal: scTotal.toFixed(2),
-      taxTotal: (itemTax + scTaxTotal).toFixed(2),
-    });
+    await recalculateCheckTotals(check.id);
 
     res.status(201).json(ledgerEntry);
   });
@@ -4735,21 +4729,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     );
     if (!result) return res.status(404).json({ message: "Service charge entry not found" });
 
-    const allCharges = await storage.getCheckServiceChargesByCheck(result.checkId);
-    const activeCharges = allCharges.filter(c => !c.voided);
-    const scTotal = activeCharges.reduce((sum, c) => sum + parseFloat(c.amount), 0);
-    const scTaxTotal = activeCharges.reduce((sum, c) => sum + parseFloat(c.taxAmount || "0"), 0);
-    
-    const check = await storage.getCheck(result.checkId);
-    const items = check ? await storage.getCheckItems(check.id) : [];
-    const itemTax = items
-      .filter(i => !i.voided)
-      .reduce((sum, i) => sum + parseFloat(i.taxAmount || "0"), 0);
-    
-    await storage.updateCheck(result.checkId, {
-      serviceChargeTotal: scTotal.toFixed(2),
-      taxTotal: (itemTax + scTaxTotal).toFixed(2),
-    });
+    await recalculateCheckTotals(result.checkId);
 
     res.json(result);
   });
@@ -22344,6 +22324,27 @@ connect();
     } catch (error) {
       console.error("Decrement availability error:", error);
       res.status(500).json({ message: "Failed to decrement availability" });
+    }
+  });
+
+  app.post("/api/item-availability/increment", async (req, res) => {
+    try {
+      const { menuItemId, propertyId, delta = 1 } = req.body;
+      
+      if (!menuItemId || !propertyId) {
+        return res.status(400).json({ message: "menuItemId and propertyId are required" });
+      }
+      
+      const availability = await storage.incrementItemAvailability(menuItemId, propertyId, delta);
+      
+      if (availability) {
+        broadcastAvailabilityUpdate(propertyId, menuItemId);
+      }
+      
+      res.json(availability || { menuItemId, propertyId, currentQuantity: null, is86ed: false });
+    } catch (error) {
+      console.error("Increment availability error:", error);
+      res.status(500).json({ message: "Failed to increment availability" });
     }
   });
 

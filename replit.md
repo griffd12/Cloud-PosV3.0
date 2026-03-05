@@ -59,6 +59,15 @@ Never fix a single symptom in isolation. Always trace the full impact chain.
 - **CAPS Service Host Resilience**: Ensures critical database tables exist and robust token management.
 - **Real-time Sync Push Notifications**: Critical sync events (transaction success/failure, CAPS connect/disconnect) trigger push notifications via WebSocket and a notification center UI. Server deduplicates CAPS connection notifications (10-min window). Notification panel has visible read/unread dots, Clear All button, auto-mark-read on open, and plain-language messages.
 
+## Bug Fixes Applied
+- **Currency Precision**: Service-host `recalculateTotals` now uses integer cents math via `toCents`/`fromCents` helpers to eliminate floating-point rounding errors in check totals.
+- **Service Charge Totals**: Service charge add/void routes now use centralized `recalculateCheckTotals()` which includes service charge amounts and tax in the check total calculation.
+- **Item Availability Rollback**: Failed add-item operations now call `/api/item-availability/increment` to revert the optimistic quantity decrement, with a corresponding new storage method and API route.
+- **Void Idempotency**: `voidItem` in CAPS service returns early if an item is already voided, preventing duplicate journal entries.
+- **Check Lock Cleanup**: POS page now releases check locks on `beforeunload` (via `sendBeacon`) and component unmount to prevent lock leaks on navigation.
+- **Inactivity Logout Guard**: Inactivity logout timer is paused when the payment modal is open to avoid logging out during active transactions.
+- **Order Device Routing Guard**: Workstation form prevents saving before order device routing data has loaded, avoiding accidental wipe of existing routing assignments.
+
 ## External Dependencies
 
 ### Database

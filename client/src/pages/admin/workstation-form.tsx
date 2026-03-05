@@ -58,6 +58,7 @@ function cleanPrinterId(val: any): string | null {
 
 interface OrderDeviceRoutingHandle {
   getSelectedIds: () => string[];
+  isLoaded: () => boolean;
 }
 
 interface OrderDeviceRoutingProps {
@@ -69,20 +70,24 @@ interface OrderDeviceRoutingProps {
 const OrderDeviceRouting = forwardRef<OrderDeviceRoutingHandle, OrderDeviceRoutingProps>(
   function OrderDeviceRouting({ editingItem, orderDevices, properties }, ref) {
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [routingLoaded, setRoutingLoaded] = useState(!editingItem);
     const loadedForId = useRef<string | null>(null);
 
     useImperativeHandle(ref, () => ({
       getSelectedIds: () => selectedIds,
-    }), [selectedIds]);
+      isLoaded: () => routingLoaded,
+    }), [selectedIds, routingLoaded]);
 
     useEffect(() => {
       const wsId = editingItem?.id ?? null;
       if (!wsId) {
         loadedForId.current = null;
+        setRoutingLoaded(true);
         return;
       }
       if (wsId !== loadedForId.current) {
         loadedForId.current = wsId;
+        setRoutingLoaded(false);
         let cancelled = false;
         fetch(`/api/workstations/${wsId}/order-devices`, { headers: getAuthHeaders() })
           .then(res => res.ok ? res.json() : [])
@@ -95,9 +100,10 @@ const OrderDeviceRouting = forwardRef<OrderDeviceRoutingHandle, OrderDeviceRouti
                 if (sorted.length === prevSorted.length && sorted.every((v, i) => v === prevSorted[i])) return prev;
                 return ids;
               });
+              setRoutingLoaded(true);
             }
           })
-          .catch(() => { if (!cancelled) setSelectedIds(prev => prev.length === 0 ? prev : []); });
+          .catch(() => { if (!cancelled) { setSelectedIds(prev => prev.length === 0 ? prev : []); setRoutingLoaded(true); } });
         return () => { cancelled = true; };
       }
     }, [editingItem?.id]);
@@ -294,6 +300,10 @@ export function WorkstationForm({
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
+    if (editingItem && orderDeviceRoutingRef.current && !orderDeviceRoutingRef.current.isLoaded()) {
+      toast({ title: "Please wait", description: "Order device routing data is still loading", variant: "destructive" });
+      return;
+    }
     form.handleSubmit((data: InsertWorkstation) => {
       const cleanedData = {
         ...data,

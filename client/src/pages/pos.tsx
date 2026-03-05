@@ -156,9 +156,10 @@ export default function PosPage() {
   const fontScale = useDocumentFontScale(wsContext?.workstation?.fontScale);
 
   // Auto-logout after inactivity - cancel unsent items and sign out
+  // Paused when the payment modal is open to avoid interrupting transactions
   useInactivityLogout({
     timeoutMinutes: wsContext?.workstation?.autoLogoutMinutes,
-    enabled: !!currentEmployee && !!wsContext?.workstation?.autoLogoutMinutes,
+    enabled: !!currentEmployee && !!wsContext?.workstation?.autoLogoutMinutes && !showPaymentModal,
   });
 
   // Send periodic heartbeat to track workstation status
@@ -185,6 +186,24 @@ export default function PosPage() {
       console.error("Failed to release check lock:", error);
     }
   }, [currentCheck?.id, workstationId]);
+
+  // Release check lock on page unload or component unmount
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (currentCheck?.id && workstationId) {
+        const blob = new Blob(
+          [JSON.stringify({ workstationId })],
+          { type: "application/json" }
+        );
+        navigator.sendBeacon(`/api/checks/${currentCheck.id}/unlock`, blob);
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      releaseCurrentCheckLock();
+    };
+  }, [currentCheck?.id, workstationId, releaseCurrentCheckLock]);
 
   // Enhanced logout that releases locks first
   const handleLogout = useCallback(async () => {
@@ -641,6 +660,11 @@ export default function PosPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/item-availability"] });
       queryClient.invalidateQueries({ queryKey: ["/api/checks", currentCheck?.id] });
       toast({ title: "Failed to add item", description: detail, variant: "destructive" });
+      apiRequest("POST", `/api/item-availability/increment`, {
+        menuItemId: variables?.menuItem?.id,
+        propertyId: currentRvc?.propertyId,
+        delta: 1,
+      }).catch(() => {});
     },
   });
 
@@ -1478,6 +1502,11 @@ export default function PosPage() {
           setCheckItems((prev) => prev.filter(ci => ci.id !== optimisticId));
           queryClient.invalidateQueries({ queryKey: ["/api/item-availability"] });
           toast({ title: "Failed to add item", variant: "destructive" });
+          apiRequest("POST", `/api/item-availability/increment`, {
+            menuItemId: item.id,
+            propertyId: currentRvc?.propertyId,
+            delta: 1,
+          }).catch(() => {});
         }
       }
     } catch {
