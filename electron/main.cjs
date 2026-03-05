@@ -2842,12 +2842,14 @@ function registerProtocolInterceptor() {
         triggerBackgroundSync();
       }
 
-      if (response.ok && isApiRequest && /^\/api\/checks/.test(url.pathname) && request.method !== 'GET') {
+      if (response.ok && isApiRequest && /^\/api\/checks/.test(url.pathname) && request.method !== 'GET' && connectionMode === 'green') {
         const capsUrl = getCapsServiceHostUrl();
         if (capsUrl) {
           const warmClone = response.clone();
           (async () => {
             try {
+              const contentType = warmClone.headers.get('content-type') || '';
+              if (!contentType.includes('json')) return;
               const responseData = await warmClone.json();
               let checkId = null;
               const checkIdMatch = url.pathname.match(/^\/api\/checks\/([^/]+)/);
