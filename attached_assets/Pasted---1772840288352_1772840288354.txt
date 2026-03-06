@@ -1,0 +1,148 @@
+====================================================================================================
+  [APP] APPLICATION STARTUP - 2026-03-06T23:34:20.151Z
+====================================================================================================
+[2026-03-06T23:34:20.152Z] [INFO ] [APP         ] [App] Cloud POS starting | DATA: {"version":"3.1.46","mode":"pos","kiosk":false,"platform":"win32"}
+[2026-03-06T23:34:20.156Z] [INFO ] [APP         ] [App] Directories | DATA: {"config":"C:\\Users\\DG\\AppData\\Local\\Cloud POS\\config","data":"C:\\Users\\DG\\AppData\\Local\\Cloud POS\\data","logs":"C:\\Users\\DG\\AppData\\Local\\Cloud POS\\logs"}
+[2026-03-06T23:34:20.161Z] [INFO ] [APP         ] [App] Setup previously completed, initializing all services
+[2026-03-06T23:34:20.166Z] [INFO ] [APP         ] [AutoStartup] Registered "Cloud POS" for auto-startup on boot | DATA: {"exePath":"C:\\Program Files\\Cloud POS\\Cloud POS\\Cloud POS.exe","mode":"pos"}
+[2026-03-06T23:34:20.170Z] [WARN ] [APP         ] [AutoStartup] Upgrade migration: auto-startup registration could not be confirmed, will retry on next launch
+[2026-03-06T23:34:20.173Z] [INFO ] [APP         ] [App] Initializing services after setup verification
+[2026-03-06T23:34:20.175Z] [INFO ] [APP         ] [CAPS] Loaded cached CAPS config | DATA: {"serviceHostUrl":"http://127.0.0.1:3001","isCaps":true}
+[2026-03-06T23:34:20.214Z] [INFO ] [APP         ] [OfflineDB] SQLite database initialized | DATA: {"path":"C:\\Users\\DG\\AppData\\Local\\Cloud POS\\data\\offline.db"}
+[2026-03-06T23:34:20.217Z] [INFO ] [OFFLINEDB   ] [Init] better-sqlite3 native module loaded successfully
+[2026-03-06T23:34:20.221Z] [WARN ] [OFFLINEDB   ] [Encryption] keytar not available for Credential Manager, using file-based key | DATA: Cannot find module 'keytar'
+Require stack:
+- C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\offline-database.cjs
+- C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\main.cjs
+- 
+[2026-03-06T23:34:20.224Z] [WARN ] [OFFLINEDB   ] [Encryption] better-sqlite3 not compiled with SQLCipher. To enable encryption, rebuild with: npm rebuild better-sqlite3 --build-from-source --sqlite3=sqlcipher
+[2026-03-06T23:34:20.247Z] [INFO ] [OFFLINEDB   ] [Init] SQLite database initialized | DATA: C:\Users\DG\AppData\Local\Cloud POS\data\offline.db
+[2026-03-06T23:34:20.249Z] [INFO ] [OFFLINEDB   ] [Init] Encryption: DISABLED (build with SQLCipher to enable)
+[2026-03-06T23:34:20.251Z] [INFO ] [APP         ] [OfflineDB] Enhanced offline database initialized
+[2026-03-06T23:34:20.254Z] [INFO ] [PRINT       ] [Service] Starting print agent service
+[2026-03-06T23:34:20.297Z] [INFO ] [PRINT       ] [Connect] Connecting to wss://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev/ws/print-agents
+[2026-03-06T23:34:20.342Z] [INFO ] [APP         ] [Connectivity] Check interval set to 15s (mode: green)
+[2026-03-06T23:34:20.403Z] [INFO ] [APP         ] [Sync] Background sync worker started (5s interval, syncs to CAPS in GREEN/YELLOW)
+[2026-03-06T23:34:20.744Z] [INFO ] [PRINT       ] [Connect] WebSocket connected, authenticating
+[2026-03-06T23:34:20.836Z] [INFO ] [PRINT       ] [Auth] Authenticated as: SNS-001-WS01 (Embedded Agent) (58663b6c-dc06-4ec2-848f-dfd0c2dbdcf4)
+[2026-03-06T23:34:20.841Z] [INFO ] [PRINT       ] [Status] connected=true, auth=true
+[2026-03-06T23:34:21.578Z] [INFO ] [APP         ] [OfflineDB] Cloud reachable, starting initial data sync
+[2026-03-06T23:34:21.584Z] [INFO ] [OFFLINEDB   ] [Sync] Starting full sync from cloud...
+[2026-03-06T23:34:26.574Z] [INFO ] [OFFLINEDB   ] [Sync] Sync complete. 37 tables synced, 0 errors
+[2026-03-06T23:34:26.580Z] [INFO ] [APP         ] [OfflineDB] Initial sync completed | DATA: {"tables":37,"errors":0}
+[2026-03-06T23:34:27.725Z] [INFO ] [APP         ] [Interceptor] Service host URL set: http://127.0.0.1:3001
+[2026-03-06T23:34:27.727Z] [INFO ] [APP         ] [CAPS] Activation config fetched | DATA: {"serviceHostUrl":"http://127.0.0.1:3001","capsWorkstationId":"32fb06f3-837f-42ed-a6f5-90436ca62e06","capsWorkstationName":"SNS-001-WS01","isCaps":true}
+[2026-03-06T23:34:27.732Z] [INFO ] [APP         ] [ServiceHost] Starting embedded service host (CAPS mode) | DATA: {"dataDir":"C:\\Users\\DG\\AppData\\Local\\Cloud POS\\data\\service-host","port":3001,"cloudUrl":"https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev"}
+[2026-03-06T23:34:28.534Z] [INFO ] [APP         ] [ServiceHost] ============================================================
+[2026-03-06T23:34:28.537Z] [INFO ] [APP         ] [ServiceHost] Cloud POS Service Host v1.0.0
+============================================================
+Cloud URL: https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev
+Service Host ID: 7cfb0d8b-73e4-4950-9baa-12f020e8deba
+Property ID: b0c038b1-5c55-4c63-85fe-5ea9dc64a767
+Data Directory: C:\Users\DG\AppData\Local\Cloud POS\data\service-host
+CAL Root Directory: C:\OPS-POS
+
+[DB] Database already initialized in constructor
+Database initialized
+[2026-03-06T23:34:28.802Z] [INFO ] [APP         ] [ServiceHost] WebSocket connected to cloud
+[2026-03-06T23:34:28.847Z] [INFO ] [APP         ] [ServiceHost] Authenticated with cloud
+[2026-03-06T23:34:28.852Z] [INFO ] [APP         ] [ServiceHost] Connected to cloud
+Starting full configuration sync for property b0c038b1-5c55-4c63-85fe-5ea9dc64a767...
+[2026-03-06T23:34:29.677Z] [INFO ] [APP         ] [ServiceHost] [ConfigSync] Raw response keys: configVersion, timestamp, data
+[ConfigSync] Inner data keys: enterprise, property, revenueCenters, employees, roles, menuItems, modifierGroups, modifiers, modifierGroupModifiers, menuItemModifierGroups, slus, taxGroups, tenders, discounts, serviceCharges, printers, kdsDevices, workstations, printClasses, orderDevices, orderDevicePrinters, orderDeviceKds, printClassRouting, jobCodes
+[ConfigSync] Enterprise: Blue Oceans Management (587bd7b1-db7e-487c-b1f7-2315ab093502)
+[ConfigSync] Property: SNS-Newport Beach (b0c038b1-5c55-4c63-85fe-5ea9dc64a767)
+[2026-03-06T23:34:29.681Z] [INFO ] [APP         ] [ServiceHost] [ConfigSync] Mapped entity arrays: enterprises:1, properties:1, rvcs:1, slus:5, menuItems:26, modifierGroups:6, modifiers:34, modifierGroupModifiers:39, menuItemModifierGroups:37, printClasses:4, employees:7, roles:2, jobCodes:4, workstations:3, printers:2, kdsDevices:3, orderDevices:3, printClassRouting:5, taxGroups:2, tenders:4, discounts:4
+  Synced 1 enterprises
+[2026-03-06T23:34:29.793Z] [INFO ] [APP         ] [ServiceHost] Synced 1 properties
+[2026-03-06T23:34:29.799Z] [INFO ] [APP         ] [ServiceHost] Synced 1 revenue centers
+[2026-03-06T23:34:29.803Z] [INFO ] [APP         ] [ServiceHost] Synced 5 SLUs
+[2026-03-06T23:34:29.840Z] [INFO ] [APP         ] [ServiceHost] Synced 26 menu items
+[2026-03-06T23:34:29.842Z] [INFO ] [APP         ] [ServiceHost] Synced 6 modifier groups
+[2026-03-06T23:34:29.845Z] [INFO ] [APP         ] [ServiceHost] Synced 34 modifiers
+[2026-03-06T23:34:29.850Z] [INFO ] [APP         ] [ServiceHost] Synced 39 modifier group assignments
+[2026-03-06T23:34:29.855Z] [INFO ] [APP         ] [ServiceHost] Synced 37 menu item modifier groups
+[2026-03-06T23:34:29.857Z] [INFO ] [APP         ] [ServiceHost] Synced 4 print classes
+  Synced 2 roles
+[2026-03-06T23:34:29.859Z] [INFO ] [APP         ] [ServiceHost] Synced 7 employees
+  Synced 4 job codes
+[2026-03-06T23:34:29.861Z] [INFO ] [APP         ] [ServiceHost] Synced 3 workstations
+  Synced 2 printers
+[2026-03-06T23:34:29.863Z] [INFO ] [APP         ] [ServiceHost] Synced 3 KDS devices
+  Synced 3 order devices
+  Synced 0 order device printers
+  Synced 0 order device KDS
+[2026-03-06T23:34:29.866Z] [INFO ] [APP         ] [ServiceHost] Synced 5 print class routings
+  Synced 2 tax groups
+  Synced 4 tenders
+[2026-03-06T23:34:29.868Z] [INFO ] [APP         ] [ServiceHost] Synced 4 discounts
+  Synced 0 service charges
+[2026-03-06T23:34:29.870Z] [INFO ] [APP         ] [ServiceHost] Full sync complete: 193 records, version 1
+Configuration synced from cloud
+[CAL] Starting CAL sync service
+[CAL] Root directory: C:\OPS-POS
+[2026-03-06T23:34:30.072Z] [INFO ] [APP         ] [ServiceHost] [CAL] Found 0 pending deployment(s)
+CAL deployment sync started
+[2026-03-06T23:34:30.077Z] [INFO ] [APP         ] [ServiceHost] [36m[2026-03-06T23:34:30.071Z] [INFO] [ServiceHost:TransactionSync][0m Starting transaction sync worker... {"interval":5000}
+[2026-03-06T23:34:30.082Z] [INFO ] [APP         ] [ServiceHost] CAPS device tracker started
+[2026-03-06T23:34:30.098Z] [INFO ] [APP         ] [ServiceHost] Service Host listening on http://0.0.0.0:3001
+[2026-03-06T23:34:30.104Z] [INFO ] [APP         ] [ServiceHost] Available endpoints:
+  GET  /health              - Health check
+  POST /api/caps/checks     - Create check
+  GET  /api/caps/checks     - List open checks
+  POST /api/caps/checks/:id/items - Add items
+  POST /api/caps/checks/:id/send  - Send to kitchen
+  POST /api/caps/checks/:id/pay   - Process payment
+  POST /api/print/jobs      - Submit print job
+  GET  /api/kds/tickets     - Get KDS tickets
+  POST /api/payment/authorize - Authorize payment
+  GET  /api/caps/connected-devices - CAPS device tracker
+  POST /api/caps/sync/check-state  - WS check sync
+  POST /api/caps/sync/queue-operation - WS operation sync
+  WS   /ws                  - Real-time updates
+[2026-03-06T23:34:30.342Z] [INFO ] [APP         ] [ServiceHost] Service host is ready on port 3001 (CAPS mode)
+[2026-03-06T23:34:30.350Z] [WARN ] [UPDATER     ] [Init] No GitHub token found - auto-update will only work with public repos
+[2026-03-06T23:34:30.354Z] [INFO ] [UPDATER     ] [Init] Auto-updater initialized (v3.1.46)
+[2026-03-06T23:34:30.359Z] [INFO ] [UPDATER     ] [Init] Auto-download: true, Auto-install on quit: true
+[2026-03-06T23:34:30.363Z] [INFO ] [APP         ] [App] All services initialized successfully
+[2026-03-06T23:34:30.393Z] [INFO ] [APP         ] [Interceptor] HTTPS protocol interceptor registered for offline support
+[2026-03-06T23:34:30.540Z] [INFO ] [APP         ] [Window] Launching POS mode | DATA: {"kiosk":false,"maximized":true}
+[2026-03-06T23:34:30.544Z] [INFO ] [APP         ] [Window] Loading URL: https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev/
+[2026-03-06T23:34:30.914Z] [INFO ] [APP         ] [Window] Loading screen shown, navigating to server...
+[2026-03-06T23:34:36.331Z] [DEBUG] [APP         ] [PageCache] Cache write error for /src/pages/admin/loyalty.tsx | DATA: The operation was aborted
+[2026-03-06T23:34:36.335Z] [DEBUG] [APP         ] [PageCache] Cache write error for /src/pages/admin/online-ordering.tsx | DATA: The operation was aborted
+[2026-03-06T23:34:36.339Z] [DEBUG] [APP         ] [PageCache] Cache write error for /src/pages/admin/inventory.tsx | DATA: The operation was aborted
+[2026-03-06T23:34:36.343Z] [DEBUG] [APP         ] [PageCache] Cache write error for /src/pages/admin/manager-alerts.tsx | DATA: The operation was aborted
+[2026-03-06T23:34:36.346Z] [INFO ] [APP         ] [Window] Page loaded successfully: https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev/
+[2026-03-06T23:34:36.353Z] [INFO ] [APP         ] [Interceptor] Offline mode ENABLED
+[2026-03-06T23:34:36.356Z] [WARN ] [APP         ] [Network] Connection lost: The operation was aborted due to timeout
+[2026-03-06T23:34:36.362Z] [DEBUG] [APP         ] [PageCache] Serving cached: /src/pages/admin/print-agents.tsx
+[2026-03-06T23:34:36.368Z] [DEBUG] [APP         ] [PageCache] Serving cached: /src/pages/admin/descriptors.tsx
+[2026-03-06T23:34:36.372Z] [DEBUG] [APP         ] [PageCache] Serving cached: /src/pages/admin/tip-rules.tsx
+[2026-03-06T23:34:36.376Z] [DEBUG] [APP         ] [PageCache] Serving cached: /src/pages/admin/timecard-report.tsx
+[2026-03-06T23:34:36.380Z] [DEBUG] [APP         ] [PageCache] Serving cached: /src/pages/admin/daily-operations.tsx
+[2026-03-06T23:34:36.384Z] [DEBUG] [APP         ] [PageCache] Serving cached: /src/pages/admin/break-rules.tsx
+[2026-03-06T23:34:36.389Z] [DEBUG] [APP         ] [PageCache] Serving cached: /src/pages/admin/break-monitoring.tsx
+[2026-03-06T23:34:36.393Z] [DEBUG] [APP         ] [PageCache] Serving cached: /src/pages/admin/break-violations.tsx
+[2026-03-06T23:34:36.401Z] [DEBUG] [APP         ] [PageCache] Serving cached: /src/pages/admin/minor-labor.tsx
+[2026-03-06T23:34:36.405Z] [DEBUG] [APP         ] [PageCache] Serving cached: /src/pages/admin/payment-gateway-config.tsx
+[2026-03-06T23:34:36.409Z] [DEBUG] [APP         ] [PageCache] Serving cached: /src/pages/emc/stress-test-report.tsx
+[2026-03-06T23:34:36.449Z] [DEBUG] [APP         ] [PageCache] Serving cached: /src/components/ui/select.tsx
+[2026-03-06T23:34:36.455Z] [INFO ] [APP         ] [Interceptor] Offline mode DISABLED
+[2026-03-06T23:34:36.457Z] [INFO ] [APP         ] [Network] Cloud connection restored with healthy DB — triggering sync
+[2026-03-06T23:34:36.540Z] [INFO ] [APP         ] [Interceptor] Offline mode ENABLED
+[2026-03-06T23:34:36.543Z] [WARN ] [APP         ] [Network] Connection lost: The operation was aborted due to timeout
+[2026-03-06T23:34:36.609Z] [DEBUG] [APP         ] [PageCache] Serving cached: /src/components/kds/kds-ticket.tsx
+[2026-03-06T23:34:36.615Z] [INFO ] [APP         ] [Interceptor] Offline mode DISABLED
+[2026-03-06T23:34:36.618Z] [INFO ] [APP         ] [Network] Connection restored via protocol handler
+[2026-03-06T23:34:36.657Z] [DEBUG] [APP         ] [PageCache] Cache write error for /src/components/ui/progress.tsx | DATA: The operation was aborted
+[2026-03-06T23:34:36.662Z] [DEBUG] [APP         ] [PageCache] Cache write error for /@fs/home/runner/workspace/shared/schema.ts | DATA: The operation was aborted
+[2026-03-06T23:34:45.366Z] [INFO ] [UPDATER     ] [Check] Initiating update check...
+[2026-03-06T23:34:45.372Z] [INFO ] [UPDATER     ] [Core] Checking for update
+[2026-03-06T23:34:45.378Z] [INFO ] [UPDATER     ] [Check] Checking for updates...
+[2026-03-06T23:34:46.996Z] [INFO ] [UPDATER     ] [Core] Update for version 3.1.46 is not available (latest version: 3.1.46, downgrade is disallowed).
+[2026-03-06T23:34:47.001Z] [INFO ] [UPDATER     ] [Check] App is up to date (v3.1.46)
+[2026-03-06T23:35:20.421Z] [INFO ] [APP         ] [Status] Mode: GREEN | Cloud: connected | Device: SNS-001-WS01 | Uptime: 1m | Pending sync: 0
+[2026-03-06T23:35:30.095Z] [INFO ] [APP         ] [ServiceHost] [CAPS] No devices tracked | CAPS uptime: 1min
+[2026-03-06T23:36:20.434Z] [INFO ] [APP         ] [Status] Mode: GREEN | Cloud: connected | Device: SNS-001-WS01 | Uptime: 2m | Pending sync: 0
+[2026-03-06T23:36:30.099Z] [INFO ] [APP         ] [ServiceHost] [CAPS] No devices tracked | CAPS uptime: 2min
