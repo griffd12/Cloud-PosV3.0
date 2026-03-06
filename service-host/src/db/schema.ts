@@ -14,7 +14,7 @@
 // CONFIGURATION TABLES (Synced from cloud)
 // =============================================================================
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 8;
 
 export const CREATE_SCHEMA_SQL = `
 -- Schema version tracking
@@ -191,6 +191,7 @@ CREATE TABLE IF NOT EXISTS print_classes (
   rvc_id TEXT REFERENCES rvcs(id),
   name TEXT NOT NULL,
   code TEXT NOT NULL,
+  display_order INTEGER DEFAULT 0,
   active INTEGER DEFAULT 1,
   updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -451,7 +452,12 @@ CREATE TABLE IF NOT EXISTS service_charges (
   code TEXT NOT NULL,
   charge_type TEXT NOT NULL DEFAULT 'percent',
   amount TEXT NOT NULL,
+  apply_to_subtotal INTEGER DEFAULT 1,
+  apply_to_discounted INTEGER DEFAULT 1,
+  taxable INTEGER DEFAULT 0,
+  tax_group_id TEXT,
   auto_apply INTEGER DEFAULT 0,
+  auto_apply_guest_count INTEGER,
   min_check_amount INTEGER,
   min_guest_count INTEGER,
   active INTEGER DEFAULT 1,

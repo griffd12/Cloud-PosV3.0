@@ -147,6 +147,14 @@ export class Database {
       this.migrateToV6();
     }
     
+    if (fromVersion < 7) {
+      this.migrateToV7();
+    }
+    
+    if (fromVersion < 8) {
+      this.migrateToV8();
+    }
+    
     this.run('INSERT INTO schema_version (version) VALUES (?)', [toVersion]);
   }
   
@@ -275,6 +283,56 @@ export class Database {
     }
     
     console.log('[DB] v6 migration complete');
+  }
+  
+  private migrateToV7(): void {
+    console.log('[DB] Running v7 migration: check_items columns + modifier_groups.code');
+    const checkItemCols = [
+      { name: 'sent_to_kitchen', def: 'INTEGER DEFAULT 0' },
+      { name: 'sent', def: 'INTEGER DEFAULT 0' },
+      { name: 'discount_id', def: 'TEXT' },
+      { name: 'discount_name', def: 'TEXT' },
+      { name: 'discount_amount', def: 'INTEGER DEFAULT 0' },
+      { name: 'discount_type', def: 'TEXT' },
+      { name: 'modifiers_json', def: 'TEXT' },
+    ];
+    for (const col of checkItemCols) {
+      try {
+        this.run(`ALTER TABLE check_items ADD COLUMN ${col.name} ${col.def}`);
+      } catch (e: any) {
+        if (!e.message?.includes('duplicate column')) console.log(`[DB] v7 check_items.${col.name}: ${e.message}`);
+      }
+    }
+    try {
+      this.run('ALTER TABLE modifier_groups ADD COLUMN code TEXT');
+    } catch (e: any) {
+      if (!e.message?.includes('duplicate column')) console.log(`[DB] v7 modifier_groups.code: ${e.message}`);
+    }
+    console.log('[DB] v7 migration complete');
+  }
+  
+  private migrateToV8(): void {
+    console.log('[DB] Running v8 migration: print_classes.display_order, service_charges columns');
+    try {
+      this.run('ALTER TABLE print_classes ADD COLUMN display_order INTEGER DEFAULT 0');
+    } catch (e: any) {
+      if (!e.message?.includes('duplicate column')) console.log(`[DB] v8 print_classes.display_order: ${e.message}`);
+    }
+    const scCols = [
+      { name: 'apply_to_subtotal', def: 'INTEGER DEFAULT 1' },
+      { name: 'apply_to_discounted', def: 'INTEGER DEFAULT 1' },
+      { name: 'taxable', def: 'INTEGER DEFAULT 0' },
+      { name: 'tax_group_id', def: 'TEXT' },
+      { name: 'auto_apply_guest_count', def: 'INTEGER' },
+    ];
+    for (const col of scCols) {
+      try {
+        this.run(`ALTER TABLE service_charges ADD COLUMN ${col.name} ${col.def}`);
+      } catch (e: any) {
+        if (!e.message?.includes('duplicate column')) console.log(`[DB] v8 service_charges.${col.name}: ${e.message}`);
+      }
+    }
+    console.log('[DB] v8 migration complete');
   }
   
   // ==========================================================================
@@ -581,9 +639,9 @@ export class Database {
   
   upsertPrintClass(pc: any): void {
     this.run(
-      `INSERT OR REPLACE INTO print_classes (id, enterprise_id, property_id, name, code, display_order, active, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-      [pc.id, pc.enterpriseId, pc.propertyId, pc.name, pc.code, pc.displayOrder || 0, pc.active !== false ? 1 : 0]
+      `INSERT OR REPLACE INTO print_classes (id, enterprise_id, property_id, rvc_id, name, code, display_order, active, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      [pc.id, pc.enterpriseId, pc.propertyId, pc.rvcId || pc.rvc_id || null, pc.name, pc.code, pc.displayOrder || 0, pc.active !== false ? 1 : 0]
     );
   }
   
@@ -718,11 +776,11 @@ export class Database {
   upsertModifier(mod: any): void {
     this.run(
       `INSERT OR REPLACE INTO modifiers (
-        id, enterprise_id, property_id, name, code, price_delta, active, updated_at
+        id, enterprise_id, property_id, rvc_id, name, price_delta, active, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
       [
-        mod.id, mod.enterpriseId, mod.propertyId, mod.name, mod.code,
-        mod.priceDelta || 0, mod.active !== false ? 1 : 0
+        mod.id, mod.enterpriseId, mod.propertyId, mod.rvcId || mod.rvc_id || null,
+        mod.name, mod.priceDelta || 0, mod.active !== false ? 1 : 0
       ]
     );
   }
