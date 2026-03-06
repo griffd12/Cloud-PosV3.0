@@ -1075,7 +1075,11 @@ export function createApiRoutes(
     try {
       const check = caps.getCheck(req.params.id);
       if (!check) return res.status(404).json({ error: 'Check not found' });
-      res.json(check);
+      const { items = [], payments = [], ...checkData } = check;
+      const paidAmount = payments.reduce((sum: number, p: any) => sum + parseFloat(p.amount || 0), 0);
+      const total = parseFloat(checkData.total || '0');
+      const changeDue = Math.max(0, paidAmount - total);
+      res.json({ check: { ...checkData, paidAmount, tenderedAmount: paidAmount, changeDue }, items, payments, refunds: [] });
     } catch (e) {
       res.status(500).json({ error: (e as Error).message });
     }
@@ -1085,7 +1089,11 @@ export function createApiRoutes(
     try {
       const check = caps.getCheck(req.params.id);
       if (!check) return res.status(404).json({ error: 'Check not found' });
-      res.json(check);
+      const { items = [], payments = [], ...checkData } = check;
+      const paidAmount = payments.reduce((sum: number, p: any) => sum + parseFloat(p.amount || 0), 0);
+      const total = parseFloat(checkData.total || '0');
+      const changeDue = Math.max(0, paidAmount - total);
+      res.json({ check: { ...checkData, paidAmount, tenderedAmount: paidAmount, changeDue }, items, payments, refunds: [] });
     } catch (e) {
       res.status(500).json({ error: (e as Error).message });
     }
@@ -1120,11 +1128,44 @@ export function createApiRoutes(
     }
   });
 
+  router.post('/checks/:id/service-charges', (req, res) => {
+    try {
+      const { serviceChargeId, employeeId, amount: overrideAmount } = req.body;
+      const check = caps.getCheck(req.params.id);
+      if (!check) return res.status(404).json({ error: 'Check not found' });
+      const sc = caps.db.getServiceCharge(serviceChargeId);
+      if (!sc) return res.status(404).json({ error: 'Service charge not found' });
+      const scId = `csc_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      let computedAmount = overrideAmount;
+      if (!computedAmount) {
+        if (sc.charge_type === 'percent') {
+          computedAmount = (parseFloat(check.subtotal || '0') * parseFloat(sc.amount || '0') / 100).toFixed(2);
+        } else {
+          computedAmount = sc.amount;
+        }
+      }
+      caps.db.run(
+        `INSERT INTO check_service_charges (id, check_id, service_charge_id, name, charge_type, amount, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
+        [scId, req.params.id, serviceChargeId, sc.name, sc.charge_type || 'percent', computedAmount]
+      );
+      caps.recalculateTotals(req.params.id);
+      const updatedCheck = caps.getCheck(req.params.id);
+      if (updatedCheck) {
+        caps.transactionSync.queueCheck(req.params.id, 'update', updatedCheck);
+      }
+      res.status(201).json({ id: scId, checkId: req.params.id, serviceChargeId, name: sc.name, amount: computedAmount });
+    } catch (e) {
+      res.status(400).json({ error: (e as Error).message });
+    }
+  });
+
   router.post('/checks/:id/items', (req, res) => {
     try {
       const { workstationId } = req.body;
       const items = caps.addItems(req.params.id, req.body.items || [req.body], workstationId);
-      res.json({ items });
+      const result = Array.isArray(items) ? items[items.length - 1] : items;
+      res.status(201).json(result);
     } catch (e) {
       const error = e as Error;
       if (error.message.includes('locked by another')) return res.status(409).json({ error: error.message });
@@ -1153,7 +1194,8 @@ export function createApiRoutes(
           });
         }
       }
-      res.json(result);
+      const updatedCheck = caps.getCheck(req.params.id);
+      res.json({ round: result.roundNumber || result.round || null, updatedItems: updatedCheck?.items || [] });
     } catch (e) {
       res.status(400).json({ error: (e as Error).message });
     }
@@ -1163,7 +1205,23 @@ export function createApiRoutes(
     try {
       const { workstationId, ...paymentParams } = req.body;
       const payment = caps.addPayment(req.params.id, paymentParams, workstationId);
-      res.json(payment);
+      const check = caps.getCheck(req.params.id);
+      if (!check) return res.status(404).json({ error: 'Check not found after payment' });
+      const { items = [], payments = [], ...checkData } = check;
+      const paidAmount = payments
+        .filter((p: any) => p.paymentStatus === 'completed' || !p.paymentStatus)
+        .reduce((sum: number, p: any) => sum + parseFloat(p.amount || 0), 0);
+      const total = parseFloat(checkData.total || '0');
+      const tolerance = 0.05;
+      if (paidAmount >= total - tolerance && total > 0) {
+        caps.closeCheck(req.params.id, workstationId);
+        const closedCheck = caps.getCheck(req.params.id);
+        if (closedCheck) {
+          const { items: ci, payments: cp, ...closedData } = closedCheck;
+          return res.json({ ...closedData, paidAmount, appliedTenderId: paymentParams.tenderId });
+        }
+      }
+      res.json({ ...checkData, paidAmount, appliedTenderId: paymentParams.tenderId });
     } catch (e) {
       const error = e as Error;
       if (error.message.includes('locked by another')) return res.status(409).json({ error: error.message });
@@ -1209,9 +1267,9 @@ export function createApiRoutes(
     try {
       const check = caps.getCheck(req.params.id);
       if (!check) return res.status(404).json({ error: 'Check not found' });
-      check.status = 'open';
-      check.closedAt = null;
-      res.json({ success: true });
+      caps.reopenCheck(req.params.id);
+      const updated = caps.getCheck(req.params.id);
+      res.json({ success: true, check: updated });
     } catch (e) {
       res.status(400).json({ error: (e as Error).message });
     }

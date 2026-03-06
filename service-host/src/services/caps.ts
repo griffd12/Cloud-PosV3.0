@@ -481,6 +481,23 @@ export class CapsService {
     this.transactionSync.queueCheck(checkId, 'update', updatedCheck);
   }
   
+  reopenCheck(checkId: string): void {
+    const check = this.getCheck(checkId);
+    if (!check) throw new Error('Check not found');
+    
+    this.db.run(
+      `UPDATE checks SET status = 'open', closed_at = NULL WHERE id = ?`,
+      [checkId]
+    );
+    
+    this.writeJournal(checkId, check.txnGroupId, check.rvcId, 'check_reopened', {
+      checkNumber: check.checkNumber,
+    });
+    
+    const updatedCheck = this.getCheck(checkId)!;
+    this.transactionSync.queueCheck(checkId, 'update', updatedCheck);
+  }
+  
   // Private helpers
   private getCheckItems(checkId: string): CheckItem[] {
     const rows = this.db.all<CheckItemRow>(
