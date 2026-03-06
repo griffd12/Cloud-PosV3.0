@@ -42,37 +42,9 @@ const CATEGORY_TO_QUERY_KEYS: Record<string, string[]> = {
   job_codes: ["/api/job-codes", "/api/employees"],
 };
 
-const ALL_CONFIG_QUERY_PREFIXES = [
-  "/api/menu-items",
-  "/api/slus",
-  "/api/pos-layouts",
-  "/api/pos-layouts/default",
-  "/api/employees",
-  "/api/rvcs",
-  "/api/tenders",
-  "/api/discounts",
-  "/api/service-charges",
-  "/api/printers",
-  "/api/properties",
-  "/api/page-layouts",
-  "/api/taxes",
-  "/api/tax-groups",
-  "/api/modifier-groups",
-  "/api/modifiers",
-  "/api/major-groups",
-  "/api/family-groups",
-  "/api/print-classes",
-  "/api/order-devices",
-  "/api/kds-devices",
-  "/api/workstations",
-  "/api/roles",
-  "/api/privileges",
-  "/api/enterprises",
-  "/api/devices",
-  "/api/terminal-devices",
-  "/api/ingredient-prefixes",
-  "/api/job-codes",
-];
+const ALL_CONFIG_QUERY_PREFIXES = Array.from(
+  new Set(Object.values(CATEGORY_TO_QUERY_KEYS).flat())
+);
 
 function logConfigSync(level: string, ...args: any[]) {
   const timestamp = new Date().toISOString().slice(11, 23);
@@ -82,11 +54,15 @@ function logConfigSync(level: string, ...args: any[]) {
   }
 }
 
+let connectionIdCounter = 0;
+
 export function useConfigSync() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isConnectedRef = useRef(false);
   const hasConnectedBeforeRef = useRef(false);
+  const isUnmountedRef = useRef(false);
+  const activeConnectionIdRef = useRef<number>(0);
   
   const { enterpriseId } = useDeviceContext();
 
@@ -113,17 +89,25 @@ export function useConfigSync() {
   }, [enterpriseId]);
 
   const connect = useCallback(() => {
+    if (isUnmountedRef.current) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws/kds`;
+    const connId = ++connectionIdCounter;
+    activeConnectionIdRef.current = connId;
 
     try {
-      logConfigSync("INFO", `Connecting to ${wsUrl}`);
+      logConfigSync("INFO", `Connecting to ${wsUrl} (connId=${connId})`);
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
+        if (activeConnectionIdRef.current !== connId) {
+          logConfigSync("WARN", `Stale socket opened (connId=${connId}, active=${activeConnectionIdRef.current}), closing`);
+          ws.close();
+          return;
+        }
         isConnectedRef.current = true;
         ws.send(JSON.stringify({ 
           type: "subscribe", 
@@ -153,10 +137,16 @@ export function useConfigSync() {
       };
 
       ws.onclose = () => {
+        if (activeConnectionIdRef.current !== connId) {
+          logConfigSync("INFO", `Stale socket closed (connId=${connId}, active=${activeConnectionIdRef.current}), ignoring`);
+          return;
+        }
         logConfigSync("WARN", "WebSocket disconnected, will reconnect in 2s");
         isConnectedRef.current = false;
         wsRef.current = null;
-        reconnectTimeoutRef.current = setTimeout(connect, 2000);
+        if (!isUnmountedRef.current) {
+          reconnectTimeoutRef.current = setTimeout(connect, 2000);
+        }
       };
 
       ws.onerror = () => {
@@ -169,14 +159,19 @@ export function useConfigSync() {
   }, [invalidateQueriesForCategory, invalidateAllConfigQueries, enterpriseId]);
 
   useEffect(() => {
+    isUnmountedRef.current = false;
     connect();
 
     return () => {
+      isUnmountedRef.current = true;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
       }
       if (wsRef.current) {
+        activeConnectionIdRef.current = -1;
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, [connect]);
