@@ -2913,11 +2913,11 @@ function registerProtocolInterceptor() {
         cacheResponseToDisk(url.pathname, cloned).catch(() => {});
       }
 
-      if (response.ok) {
+      if (response.ok && isApiRequest) {
         protocolConsecutiveFailCount = 0;
       }
 
-      if (!isOnline && response.ok) {
+      if (!isOnline && response.ok && isApiRequest) {
         isOnline = true;
         if (offlineInterceptor) offlineInterceptor.setOffline(false);
         setConnectionMode('green');
@@ -3049,25 +3049,35 @@ function registerProtocolInterceptor() {
             if (capsResponse.status === 401 || capsResponse.status === 404) {
               appLogger.warn('Interceptor', `YELLOW->RED fallback: CAPS returned ${capsResponse.status} for ${request.method} ${url.pathname}`);
             } else {
-              setConnectionMode('yellow');
-              if (offlineInterceptor) offlineInterceptor.setConnectionMode('yellow');
+              if (!inGracePeriod) {
+                setConnectionMode('yellow');
+                if (offlineInterceptor) offlineInterceptor.setConnectionMode('yellow');
+              } else {
+                appLogger.debug('Interceptor', `Startup grace: suppressing yellow mode downgrade for ${url.pathname}`);
+              }
               return new Response(capsResponse.body, {
                 status: capsResponse.status,
                 statusText: capsResponse.statusText,
-                headers: { ...Object.fromEntries(capsResponse.headers.entries()), 'X-Connection-Mode': 'yellow' },
+                headers: { ...Object.fromEntries(capsResponse.headers.entries()), 'X-Connection-Mode': inGracePeriod ? 'green' : 'yellow' },
               });
             }
           } catch (capsErr) {
-            appLogger.warn('Interceptor', `CAPS also unreachable: ${capsErr.message}, falling to RED`);
+            if (!inGracePeriod) {
+              appLogger.warn('Interceptor', `CAPS also unreachable: ${capsErr.message}, falling to RED`);
+              setConnectionMode('red');
+              if (offlineInterceptor) offlineInterceptor.setConnectionMode('red');
+            } else {
+              appLogger.debug('Interceptor', `Startup grace: suppressing red mode downgrade (CAPS unreachable: ${capsErr.message})`);
+            }
+          }
+        } else {
+          if (!inGracePeriod) {
             setConnectionMode('red');
             if (offlineInterceptor) offlineInterceptor.setConnectionMode('red');
           }
-        } else {
-          setConnectionMode('red');
-          if (offlineInterceptor) offlineInterceptor.setConnectionMode('red');
         }
 
-        if (offlineInterceptor && failoverClone) {
+        if (offlineInterceptor && failoverClone && !inGracePeriod) {
           appLogger.info('Interceptor', `RED FAILOVER: ${request.method} ${url.pathname}`);
           const body = await parseRequestBody(failoverClone);
           return routeToOfflineInterceptor(request.method, url, body);
