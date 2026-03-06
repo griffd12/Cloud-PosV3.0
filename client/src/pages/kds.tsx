@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest, getAuthHeaders } from "@/lib/queryClient";
+import { apiClient } from "@/lib/api-client";
 import { usePosContext } from "@/lib/pos-context";
 import { useDeviceContext } from "@/lib/device-context";
 import { usePosWebSocket, subscribeToKdsTestTicket } from "@/hooks/use-pos-websocket";
@@ -98,24 +99,36 @@ export default function KdsPage() {
   const isDedicatedKds = deviceType === "kds" && isConfigured;
 
   // For dedicated KDS, fetch the configured device info to get propertyId
-  const { data: configuredKdsDevice, isLoading: isLoadingDevice, isError: deviceError } = useQuery<KdsDevice>({
+  const { data: configuredKdsDevice, isLoading: isLoadingDevice, isError: deviceError, error: deviceQueryError } = useQuery<KdsDevice>({
     queryKey: ["/api/kds-devices", linkedDeviceId],
     enabled: isDedicatedKds && !!linkedDeviceId,
-    retry: 2,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(2000 * (attempt + 1), 10000),
+    refetchInterval: deviceConnectionError ? 10000 : false,
   });
 
-  // Handle case where configured device was deleted or not found
+  const [deviceConnectionError, setDeviceConnectionError] = useState(false);
+
   useEffect(() => {
-    if (isDedicatedKds && linkedDeviceId && deviceError) {
-      toast({ 
-        title: "Device not found", 
-        description: "The configured KDS device no longer exists. Please reconfigure.",
-        variant: "destructive" 
-      });
-      clearDeviceConfig();
-      navigate("/setup");
+    if (isDedicatedKds && linkedDeviceId && deviceError && deviceQueryError) {
+      const errorMsg = (deviceQueryError as Error)?.message || '';
+      const is404 = errorMsg.startsWith('404:') || errorMsg.includes('not found');
+
+      if (is404) {
+        toast({ 
+          title: "Device not found", 
+          description: "The configured KDS device no longer exists. Please reconfigure.",
+          variant: "destructive" 
+        });
+        clearDeviceConfig();
+        navigate("/setup");
+      } else {
+        setDeviceConnectionError(true);
+      }
+    } else if (!deviceError) {
+      setDeviceConnectionError(false);
     }
-  }, [isDedicatedKds, linkedDeviceId, deviceError, clearDeviceConfig, navigate, toast]);
+  }, [isDedicatedKds, linkedDeviceId, deviceError, deviceQueryError, clearDeviceConfig, navigate, toast]);
 
   // Use property from configured device for dedicated KDS, otherwise from current RVC
   // Fallback to devicePropertyId from device context if configuredKdsDevice hasn't loaded yet
@@ -266,7 +279,7 @@ export default function KdsPage() {
   });
 
   // WebSocket for real-time KDS updates with auto-reconnect
-  // For dedicated KDS, subscribe to property-wide updates; for POS mode, subscribe to RVC
+  // Adapts to connection mode: GREEN=cloud, YELLOW=CAPS, RED=skip (polling only)
   useEffect(() => {
     if (!isDedicatedKds && !currentRvc) return;
     if (isDedicatedKds && !propertyId) return;
@@ -277,8 +290,35 @@ export default function KdsPage() {
 
     const connect = () => {
       if (unmounted) return;
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws/kds`;
+
+      const currentMode = apiClient.getMode();
+
+      if (currentMode === 'red') {
+        reconnectTimer = setTimeout(connect, 10000);
+        return;
+      }
+
+      let wsUrl: string;
+      if (currentMode === 'yellow') {
+        const serviceHostUrl = localStorage.getItem('serviceHostUrl');
+        if (serviceHostUrl) {
+          try {
+            const shUrl = new URL(serviceHostUrl);
+            const wsProtocol = shUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsUrl = `${wsProtocol}//${shUrl.host}/ws/kds`;
+          } catch {
+            reconnectTimer = setTimeout(connect, 10000);
+            return;
+          }
+        } else {
+          reconnectTimer = setTimeout(connect, 10000);
+          return;
+        }
+      } else {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        wsUrl = `${protocol}//${window.location.host}/ws/kds`;
+      }
+
       socket = new WebSocket(wsUrl);
 
       socket.onopen = () => {
@@ -305,7 +345,9 @@ export default function KdsPage() {
       socket.onclose = () => {
         setWsConnected(false);
         if (!unmounted) {
-          reconnectTimer = setTimeout(connect, 3000);
+          const mode = apiClient.getMode();
+          const delay = mode === 'green' ? 3000 : 10000;
+          reconnectTimer = setTimeout(connect, delay);
         }
       };
 
@@ -316,8 +358,19 @@ export default function KdsPage() {
 
     connect();
 
+    const modeUnsub = apiClient.onModeChange((newMode) => {
+      if (newMode === 'red') {
+        if (socket) { socket.close(); socket = null; }
+      } else {
+        if (socket) { socket.close(); socket = null; }
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+        reconnectTimer = setTimeout(connect, 500);
+      }
+    });
+
     return () => {
       unmounted = true;
+      modeUnsub();
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (socket) socket.close();
     };
@@ -435,10 +488,33 @@ export default function KdsPage() {
   // Show loading state while fetching device info for dedicated KDS
   if (isDedicatedKds && isLoadingDevice) {
     return (
-      <div className="h-screen flex items-center justify-center">
+      <div className="h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading device configuration...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isDedicatedKds && deviceConnectionError && !configuredKdsDevice) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background" data-testid="kds-connection-error">
+        <div className="text-center max-w-md">
+          <WifiOff className="w-12 h-12 text-orange-500 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold mb-2">Reconnecting to Server</h2>
+          <p className="text-muted-foreground mb-4">
+            Unable to reach the server to load KDS configuration. The display will automatically reconnect when the server is available.
+          </p>
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500 mx-auto mb-4" />
+          <div className="flex items-center justify-center gap-2">
+            <Button variant="outline" onClick={handleRefresh} data-testid="button-kds-retry-connection">
+              Retry Now
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-4">
+            Device ID: {linkedDeviceId?.substring(0, 8)}...
+          </p>
         </div>
       </div>
     );
