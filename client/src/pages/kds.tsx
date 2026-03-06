@@ -98,6 +98,8 @@ export default function KdsPage() {
   // Check if this is a dedicated KDS device
   const isDedicatedKds = deviceType === "kds" && isConfigured;
 
+  const [deviceConnectionError, setDeviceConnectionError] = useState(false);
+
   // For dedicated KDS, fetch the configured device info to get propertyId
   const { data: configuredKdsDevice, isLoading: isLoadingDevice, isError: deviceError, error: deviceQueryError } = useQuery<KdsDevice>({
     queryKey: ["/api/kds-devices", linkedDeviceId],
@@ -106,8 +108,6 @@ export default function KdsPage() {
     retryDelay: (attempt) => Math.min(2000 * (attempt + 1), 10000),
     refetchInterval: deviceConnectionError ? 10000 : false,
   });
-
-  const [deviceConnectionError, setDeviceConnectionError] = useState(false);
 
   useEffect(() => {
     if (isDedicatedKds && linkedDeviceId && deviceError && deviceQueryError) {
