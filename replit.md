@@ -61,6 +61,7 @@ Never fix a single symptom in isolation. Always trace the full impact chain.
 - **Device Tracker**: Unified device tracking for both WS and KDS Electron devices.
 - **CAPS Service Host Resilience**: Ensures critical database tables exist and robust token management.
 - **Real-time Sync Push Notifications**: Critical sync events (transaction success/failure, CAPS connect/disconnect) trigger push notifications via WebSocket and a notification center UI. Server deduplicates CAPS connection notifications (10-min window). Notification panel has visible read/unread dots, Clear All button, auto-mark-read on open, and plain-language messages.
+- **Instant EMC Config Propagation (v3.1.42)**: ALL EMC config mutation routes now call `broadcastConfigUpdate(category, action, entityId, enterpriseId)` to push WebSocket notifications instantly to connected POS/KDS devices. 73+ routes added across: pos_layouts, modifiers, modifier_groups, menu items (delete/import/SLU), major_groups, family_groups, tax_groups, print_classes, order_devices, kds_devices, print_routing, workstations, roles, employees, properties, enterprises, devices, ingredients. Frontend `useConfigSync` hook in `client/src/hooks/use-config-sync.ts` maps 26 categories to specific React Query cache invalidation targets so POS pages refetch instantly without page reload.
 
 ## Clear Sales Data Propagation
 - **Cloud**: `clearSalesData` API clears PostgreSQL, then broadcasts `SALES_DATA_CLEARED` to connected service hosts and `sales_data_cleared` POS event to all browser/Electron clients.

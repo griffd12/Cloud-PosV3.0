@@ -1,0 +1,31 @@
+2026-03-06T06:40:34.043Z] [INFO ] [APP         ] [ServiceHost] [ConfigSync] Raw response keys: configVersion, timestamp, data
+[ConfigSync] Inner data keys: enterprise, property, revenueCenters, employees, roles, menuItems, modifierGroups, modifiers, modifierGroupModifiers, menuItemModifierGroups, slus, taxGroups, tenders, discounts, serviceCharges, printers, kdsDevices, workstations, printClasses, orderDevices, orderDevicePrinters, orderDeviceKds, printClassRouting, jobCodes
+[2026-03-06T06:40:34.049Z] [INFO ] [APP         ] [ServiceHost] [ConfigSync] Mapped entity arrays: enterprises:1, properties:1, rvcs:1, slus:14, menuItems:152, modifierGroups:8, modifiers:90, modifierGroupModifiers:45, menuItemModifierGroups:66, printClasses:10, employees:7, roles:2, jobCodes:5, workstations:3, printers:2, kdsDevices:3, orderDevices:4, printClassRouting:5, taxGroups:4, tenders:6, discounts:5
+  Synced 1 enterprises
+[2026-03-06T06:40:34.071Z] [INFO ] [APP         ] [ServiceHost] Synced 1 properties
+[2026-03-06T06:40:34.074Z] [INFO ] [APP         ] [ServiceHost] Synced 1 revenue centers
+[2026-03-06T06:40:34.077Z] [INFO ] [APP         ] [ServiceHost] Synced 14 SLUs
+[2026-03-06T06:40:34.101Z] [INFO ] [APP         ] [ServiceHost] Synced 152 menu items
+[2026-03-06T06:40:34.103Z] [INFO ] [APP         ] [ServiceHost] Synced 8 modifier groups
+[2026-03-06T06:40:34.139Z] [INFO ] [APP         ] [ServiceHost] Synced 90 modifiers
+[2026-03-06T06:40:34.146Z] [INFO ] [APP         ] [ServiceHost] Synced 45 modifier group assignments
+[2026-03-06T06:40:34.154Z] [INFO ] [APP         ] [ServiceHost] Synced 66 menu item modifier groups
+[2026-03-06T06:40:34.156Z] [INFO ] [APP         ] [ServiceHost] Synced 10 print classes
+  Synced 2 roles
+[2026-03-06T06:40:34.158Z] [INFO ] [APP         ] [ServiceHost] Synced 7 employees
+  Synced 5 job codes
+[2026-03-06T06:40:34.160Z] [INFO ] [APP         ] [ServiceHost] Synced 3 workstations
+  Synced 2 printers
+[2026-03-06T06:40:34.162Z] [INFO ] [APP         ] [ServiceHost] Synced 3 KDS devices
+  Synced 4 order devices
+  Synced 0 order device printers
+  Synced 0 order device KDS
+[2026-03-06T06:40:34.165Z] [INFO ] [APP         ] [ServiceHost] Synced 5 print class routings
+  Synced 4 tax groups
+[2026-03-06T06:40:34.168Z] [INFO ] [APP         ] [ServiceHost] Synced 6 tenders
+  Synced 5 discounts
+  Synced 0 service charges
+[2026-03-06T06:40:34.170Z] [INFO ] [APP         ] [ServiceHost] Full sync complete: 434 records, version 1
+Configuration synced from cloud
+[CAL] Starting CAL sync service
+[CAL] Root directory: C:\OPS-POS
