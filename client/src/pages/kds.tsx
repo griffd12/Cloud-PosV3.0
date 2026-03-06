@@ -112,7 +112,7 @@ export default function KdsPage() {
   useEffect(() => {
     if (isDedicatedKds && linkedDeviceId && deviceError && deviceQueryError) {
       const errorMsg = (deviceQueryError as Error)?.message || '';
-      const is404 = errorMsg.startsWith('404:') || errorMsg.includes('not found');
+      const is404 = errorMsg.startsWith('404:');
 
       if (is404) {
         toast({ 
