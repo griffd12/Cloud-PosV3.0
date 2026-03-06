@@ -48,6 +48,7 @@ Never fix a single symptom in isolation. Always trace the full impact chain.
 - **Multi-Enterprise Architecture**: Server-side data isolation with distinct access levels.
 - **Native Application Capabilities (Windows Electron)**: Embedded print agent, SQLite/SQLCipher for offline data, local reporting, store-and-forward for offline transactions, EMV terminal communication, auto-launch, kiosk mode, and terminal setup wizard.
 - **Configuration Inheritance & Override**: Items inherit down the hierarchy with override capabilities tracked via a generic OptionBits system.
+- **Real-time Config Sync**: WebSocket-based config sync (`useConfigSync` hook) with reconnect catch-up invalidation — when WebSocket reconnects after a drop, all config queries are automatically refetched to recover missed broadcasts. Connection identity guards prevent stale/duplicate socket races. Category-to-query-key mapping covers all config domains including POS layouts for custom grid support.
 - **Concurrency-Safe Check Numbering**: Atomic check number generation ensuring unique, sequential numbers.
 - **Reporting**: Canonical Data Access Layer with 7 query functions for FOH/BOH reports.
 - **Customer Onboarding Data Import**: Excel-based bulk data import system.

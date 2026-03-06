@@ -14,7 +14,7 @@ interface ConfigUpdateEvent {
 }
 
 const CATEGORY_TO_QUERY_KEYS: Record<string, string[]> = {
-  menu: ["/api/menu-items", "/api/slus"],
+  menu: ["/api/menu-items", "/api/slus", "/api/pos-layouts", "/api/pos-layouts/default"],
   slus: ["/api/slus", "/api/menu-items"],
   employees: ["/api/employees"],
   rvcs: ["/api/rvcs"],
@@ -42,21 +42,44 @@ const CATEGORY_TO_QUERY_KEYS: Record<string, string[]> = {
   job_codes: ["/api/job-codes", "/api/employees"],
 };
 
+const ALL_CONFIG_QUERY_PREFIXES = Array.from(
+  new Set(Object.values(CATEGORY_TO_QUERY_KEYS).flat())
+);
+
+function logConfigSync(level: string, ...args: any[]) {
+  const timestamp = new Date().toISOString().slice(11, 23);
+  console.log(`[ConfigSync ${timestamp}] [${level}]`, ...args);
+  if (typeof window !== "undefined" && (window as any).electronAPI?.log) {
+    (window as any).electronAPI.log(level, "ConfigSync", args.join(" "));
+  }
+}
+
+let connectionIdCounter = 0;
+
 export function useConfigSync() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isConnectedRef = useRef(false);
+  const hasConnectedBeforeRef = useRef(false);
+  const isUnmountedRef = useRef(false);
+  const activeConnectionIdRef = useRef<number>(0);
   
-  // Get enterprise ID from device context
   const { enterpriseId } = useDeviceContext();
 
+  const invalidateAllConfigQueries = useCallback(() => {
+    logConfigSync("INFO", "Invalidating all config queries (reconnect catch-up)");
+    ALL_CONFIG_QUERY_PREFIXES.forEach((prefix) => {
+      queryClient.invalidateQueries({ queryKey: [prefix] });
+    });
+  }, []);
+
   const invalidateQueriesForCategory = useCallback((category: string, eventEnterpriseId?: string | number) => {
-    // Only invalidate if the event is for our enterprise or no enterprise filter is set
     if (enterpriseId && eventEnterpriseId && String(eventEnterpriseId) !== String(enterpriseId)) {
-      return; // Skip updates for other enterprises
+      return;
     }
     
     const queryKeys = CATEGORY_TO_QUERY_KEYS[category] || [];
+    logConfigSync("INFO", `Config update: category=${category}, action=invalidate, keys=${queryKeys.join(", ") || "ALL"}`);
     queryKeys.forEach((key) => {
       queryClient.invalidateQueries({ queryKey: [key] });
     });
@@ -66,23 +89,39 @@ export function useConfigSync() {
   }, [enterpriseId]);
 
   const connect = useCallback(() => {
+    if (isUnmountedRef.current) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws/kds`;
+    const connId = ++connectionIdCounter;
+    activeConnectionIdRef.current = connId;
 
     try {
+      logConfigSync("INFO", `Connecting to ${wsUrl} (connId=${connId})`);
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
+        if (activeConnectionIdRef.current !== connId) {
+          logConfigSync("WARN", `Stale socket opened (connId=${connId}, active=${activeConnectionIdRef.current}), closing`);
+          ws.close();
+          return;
+        }
         isConnectedRef.current = true;
-        // Subscribe with enterprise ID if available
         ws.send(JSON.stringify({ 
           type: "subscribe", 
           channel: "all",
           enterpriseId: enterpriseId || undefined
         }));
+
+        if (hasConnectedBeforeRef.current) {
+          logConfigSync("WARN", "WebSocket reconnected — invalidating all config queries to catch up on missed updates");
+          invalidateAllConfigQueries();
+        } else {
+          logConfigSync("INFO", "WebSocket connected (first connect)");
+          hasConnectedBeforeRef.current = true;
+        }
       };
 
       ws.onmessage = (event) => {
@@ -90,6 +129,7 @@ export function useConfigSync() {
           const data = JSON.parse(event.data);
           if (data.type === "config_update") {
             const configEvent = data as ConfigUpdateEvent;
+            logConfigSync("INFO", `Received config_update: category=${configEvent.payload.category}, action=${configEvent.payload.action}, entityId=${configEvent.payload.entityId || "none"}`);
             invalidateQueriesForCategory(configEvent.payload.category, configEvent.payload.enterpriseId);
           }
         } catch {
@@ -97,27 +137,41 @@ export function useConfigSync() {
       };
 
       ws.onclose = () => {
+        if (activeConnectionIdRef.current !== connId) {
+          logConfigSync("INFO", `Stale socket closed (connId=${connId}, active=${activeConnectionIdRef.current}), ignoring`);
+          return;
+        }
+        logConfigSync("WARN", "WebSocket disconnected, will reconnect in 2s");
         isConnectedRef.current = false;
         wsRef.current = null;
-        reconnectTimeoutRef.current = setTimeout(connect, 5000);
+        if (!isUnmountedRef.current) {
+          reconnectTimeoutRef.current = setTimeout(connect, 2000);
+        }
       };
 
       ws.onerror = () => {
+        logConfigSync("ERROR", "WebSocket error, closing connection");
         ws.close();
       };
     } catch {
+      logConfigSync("ERROR", "Failed to create WebSocket connection");
     }
-  }, [invalidateQueriesForCategory, enterpriseId]);
+  }, [invalidateQueriesForCategory, invalidateAllConfigQueries, enterpriseId]);
 
   useEffect(() => {
+    isUnmountedRef.current = false;
     connect();
 
     return () => {
+      isUnmountedRef.current = true;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
       }
       if (wsRef.current) {
+        activeConnectionIdRef.current = -1;
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, [connect]);
