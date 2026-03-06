@@ -1149,6 +1149,11 @@ export function createApiRoutes(
          VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
         [scId, req.params.id, serviceChargeId, sc.name, sc.charge_type || 'percent', computedAmount]
       );
+      caps.recalculateTotals(req.params.id);
+      const updatedCheck = caps.getCheck(req.params.id);
+      if (updatedCheck) {
+        caps.transactionSync.queueCheck(req.params.id, 'update', updatedCheck);
+      }
       res.status(201).json({ id: scId, checkId: req.params.id, serviceChargeId, name: sc.name, amount: computedAmount });
     } catch (e) {
       res.status(400).json({ error: (e as Error).message });
