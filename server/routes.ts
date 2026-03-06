@@ -3075,11 +3075,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       let data = await storage.getModifierGroupModifiers();
       if (propertyId) {
         const property = await storage.getProperty(propertyId);
-        if (property) {
-          const groups = (await storage.getModifierGroups()).filter((g: any) => g.enterpriseId === property.enterpriseId);
-          const groupIds = new Set(groups.map((g: any) => g.id));
-          data = data.filter((m: any) => groupIds.has(m.modifierGroupId));
-        }
+        if (!property) return res.status(404).json({ message: "Property not found" });
+        const groups = (await storage.getModifierGroups()).filter((g: any) => g.enterpriseId === property.enterpriseId);
+        const groupIds = new Set(groups.map((g: any) => g.id));
+        data = data.filter((m: any) => groupIds.has(m.modifierGroupId));
       }
       res.json(data);
     } catch (error) {
@@ -3093,11 +3092,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       let data = await storage.getMenuItemModifierGroups();
       if (propertyId) {
         const property = await storage.getProperty(propertyId);
-        if (property) {
-          const items = (await storage.getMenuItems()).filter((i: any) => i.enterpriseId === property.enterpriseId);
-          const itemIds = new Set(items.map((i: any) => i.id));
-          data = data.filter((m: any) => itemIds.has(m.menuItemId));
-        }
+        if (!property) return res.status(404).json({ message: "Property not found" });
+        const items = (await storage.getMenuItems()).filter((i: any) => i.enterpriseId === property.enterpriseId);
+        const itemIds = new Set(items.map((i: any) => i.id));
+        data = data.filter((m: any) => itemIds.has(m.menuItemId));
       }
       res.json(data);
     } catch (error) {
@@ -3141,11 +3139,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       let data = await storage.getMenuItemRecipeIngredients();
       if (propertyId) {
         const property = await storage.getProperty(propertyId);
-        if (property) {
-          const items = (await storage.getMenuItems()).filter((i: any) => i.enterpriseId === property.enterpriseId);
-          const itemIds = new Set(items.map((i: any) => i.id));
-          data = data.filter((r: any) => itemIds.has(r.menuItemId));
-        }
+        if (!property) return res.status(404).json({ message: "Property not found" });
+        const items = (await storage.getMenuItems()).filter((i: any) => i.enterpriseId === property.enterpriseId);
+        const itemIds = new Set(items.map((i: any) => i.id));
+        data = data.filter((r: any) => itemIds.has(r.menuItemId));
       }
       res.json(data);
     } catch (error) {
