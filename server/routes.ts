@@ -2056,6 +2056,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/properties/:id", async (req, res) => {
     await storage.deleteProperty(req.params.id);
+    broadcastConfigUpdate("properties", "delete", req.params.id);
     res.status(204).send();
   });
 
@@ -3860,11 +3861,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.put("/api/workstations/:id", async (req, res) => {
     const data = await storage.updateWorkstation(req.params.id, req.body);
     if (!data) return res.status(404).json({ message: "Not found" });
+    broadcastConfigUpdate("workstations", "update", req.params.id, data.enterpriseId);
     res.json(data);
   });
 
   app.delete("/api/workstations/:id", async (req, res) => {
     await storage.deleteWorkstation(req.params.id);
+    broadcastConfigUpdate("workstations", "delete", req.params.id);
     res.status(204).send();
   });
 
@@ -3880,6 +3883,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       return res.status(400).json({ message: "orderDeviceIds must be an array" });
     }
     await storage.setWorkstationOrderDevices(req.params.id, orderDeviceIds);
+    broadcastConfigUpdate("workstations", "update", req.params.id);
     res.json({ success: true });
   });
 
@@ -8269,12 +8273,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.delete("/api/pos-layouts/:id", async (req, res) => {
     const deleted = await storage.deletePosLayout(req.params.id);
     if (!deleted) return res.status(404).json({ message: "Layout not found" });
+    broadcastConfigUpdate("pos_layouts", "delete", req.params.id);
     res.status(204).end();
   });
 
   app.get("/api/pos-layouts/:id/cells", async (req, res) => {
     const cells = await storage.getPosLayoutCells(req.params.id);
-      broadcastConfigUpdate("pos_layouts", "delete", req.params.id);
     res.json(cells);
   });
 
@@ -8538,7 +8542,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/devices", async (req, res) => {
     try {
       const device = await storage.createDevice(req.body);
-      broadcastConfigUpdate("devices", "create", data.id);
+      broadcastConfigUpdate("devices", "create", device.id);
       res.status(201).json(device);
     } catch (error: any) {
       console.error("Error creating device:", error);
@@ -8562,6 +8566,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.delete("/api/devices/:id", async (req, res) => {
     const deleted = await storage.deleteDevice(req.params.id);
     if (!deleted) return res.status(404).json({ message: "Device not found" });
+    broadcastConfigUpdate("devices", "delete", req.params.id);
     res.status(204).end();
   });
 
@@ -8580,7 +8585,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         memoryUsage: req.body.memoryUsage,
         diskUsage: req.body.diskUsage,
       });
-      broadcastConfigUpdate("devices", "delete", req.params.id);
       res.json(heartbeat);
     } catch (error: any) {
       res.status(400).json({ message: error.message || "Failed to record heartbeat" });
