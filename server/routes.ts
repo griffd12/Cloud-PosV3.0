@@ -2342,6 +2342,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       { code: "apply_discount", name: "Apply Discount", domain: "payment_control" },
     ];
     await storage.upsertPrivileges(privilegeList);
+    broadcastConfigUpdate("roles", "create");
     res.json({ message: "Privileges seeded successfully", count: privilegeList.length });
   });
 
@@ -2465,6 +2466,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       createdRoles.push(role);
     }
 
+    broadcastConfigUpdate("roles", "create", undefined, enterpriseId);
     res.json({ message: "Roles seeded with audit matrix privileges and rules", roles: createdRoles });
   });
 
@@ -12841,6 +12843,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const jobCode = await storage.createJobCode(parsed.data);
       broadcastPosEvent({ type: "job_update" });
+      broadcastConfigUpdate("job_codes", "create", jobCode.id);
       res.status(201).json(jobCode);
     } catch (error) {
       console.error("Create job code error:", error);
@@ -12856,6 +12859,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ message: "Job code not found" });
       }
       broadcastPosEvent({ type: "job_update" });
+      broadcastConfigUpdate("job_codes", "update", req.params.id);
       res.json(jobCode);
     } catch (error) {
       console.error("Update job code error:", error);
@@ -12873,6 +12877,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ message: "Job code not found" });
       }
       broadcastPosEvent({ type: "job_update" });
+      broadcastConfigUpdate("job_codes", "delete", req.params.id);
       res.status(204).send();
     } catch (error) {
       console.error("Delete job code error:", error);
@@ -13715,6 +13720,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       
       const policy = await storage.createTipPoolPolicy(parsed.data);
+      broadcastConfigUpdate("tip_pool_policies", "create", policy.id);
       res.status(201).json(policy);
     } catch (error) {
       console.error("Create tip pool policy error:", error);
@@ -13729,6 +13735,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!policy) {
         return res.status(404).json({ message: "Tip pool policy not found" });
       }
+      broadcastConfigUpdate("tip_pool_policies", "update", req.params.id);
       res.json(policy);
     } catch (error) {
       console.error("Update tip pool policy error:", error);
@@ -13743,6 +13750,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!deleted) {
         return res.status(404).json({ message: "Tip pool policy not found" });
       }
+      broadcastConfigUpdate("tip_pool_policies", "delete", req.params.id);
       res.status(204).send();
     } catch (error) {
       console.error("Delete tip pool policy error:", error);
@@ -13891,6 +13899,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ message: "Invalid tip rule data", errors: parsed.error.issues });
       }
       const rule = await storage.createTipRule(parsed.data);
+      broadcastConfigUpdate("tip_rules", "create", rule.id);
       res.status(201).json(rule);
     } catch (error) {
       console.error("Create tip rule error:", error);
@@ -13905,6 +13914,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!rule) {
         return res.status(404).json({ message: "Tip rule not found" });
       }
+      broadcastConfigUpdate("tip_rules", "update", req.params.id);
       res.json(rule);
     } catch (error) {
       console.error("Update tip rule error:", error);
@@ -13919,6 +13929,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!deleted) {
         return res.status(404).json({ message: "Tip rule not found" });
       }
+      broadcastConfigUpdate("tip_rules", "delete", req.params.id);
       res.status(204).send();
     } catch (error) {
       console.error("Delete tip rule error:", error);
@@ -13954,6 +13965,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       
       const result = await storage.upsertTipRuleJobPercentages(req.params.tipRuleId, percentages);
+      broadcastConfigUpdate("tip_rules", "update", req.params.tipRuleId);
       res.json(result);
     } catch (error) {
       console.error("Upsert tip rule job percentages error:", error);
@@ -15305,6 +15317,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/overtime-rules", async (req, res) => {
     try {
       const rule = await storage.createOvertimeRule(req.body);
+      broadcastConfigUpdate("overtime_rules", "create", rule.id);
       res.status(201).json(rule);
     } catch (error) {
       console.error("Create overtime rule error:", error);
@@ -15318,6 +15331,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!rule) {
         return res.status(404).json({ message: "Overtime rule not found" });
       }
+      broadcastConfigUpdate("overtime_rules", "update", req.params.id);
       res.json(rule);
     } catch (error) {
       console.error("Update overtime rule error:", error);
@@ -15331,6 +15345,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!success) {
         return res.status(404).json({ message: "Overtime rule not found" });
       }
+      broadcastConfigUpdate("overtime_rules", "delete", req.params.id);
       res.status(204).send();
     } catch (error) {
       console.error("Delete overtime rule error:", error);
@@ -15382,6 +15397,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/break-rules", async (req, res) => {
     try {
       const rule = await storage.createBreakRule(req.body);
+      broadcastConfigUpdate("break_rules", "create", rule.id);
       res.status(201).json(rule);
     } catch (error) {
       console.error("Create break rule error:", error);
@@ -15395,6 +15411,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!rule) {
         return res.status(404).json({ message: "Break rule not found" });
       }
+      broadcastConfigUpdate("break_rules", "update", req.params.id);
       res.json(rule);
     } catch (error) {
       console.error("Update break rule error:", error);
@@ -15408,6 +15425,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!success) {
         return res.status(404).json({ message: "Break rule not found" });
       }
+      broadcastConfigUpdate("break_rules", "delete", req.params.id);
       res.status(204).send();
     } catch (error) {
       console.error("Delete break rule error:", error);
