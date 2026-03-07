@@ -40,6 +40,10 @@ const CATEGORY_TO_QUERY_KEYS: Record<string, string[]> = {
   devices: ["/api/devices", "/api/terminal-devices", "/api/device-enrollment-tokens"],
   ingredients: ["/api/menu-items", "/api/ingredient-prefixes"],
   job_codes: ["/api/job-codes", "/api/employees"],
+  tip_pool_policies: ["/api/tip-pool-policies", "/api/tip-pool-runs"],
+  tip_rules: ["/api/tip-rules", "/api/tip-rules/property"],
+  overtime_rules: ["/api/overtime-rules"],
+  break_rules: ["/api/break-rules"],
 };
 
 const ALL_CONFIG_QUERY_PREFIXES = Array.from(
@@ -66,12 +70,22 @@ export function useConfigSync() {
   
   const { enterpriseId } = useDeviceContext();
 
+  const invalidateByPrefix = useCallback((prefix: string) => {
+    queryClient.invalidateQueries({ queryKey: [prefix] });
+    queryClient.invalidateQueries({
+      predicate: (query) => {
+        const firstKey = String(query.queryKey[0] || "");
+        return firstKey !== prefix && firstKey.startsWith(prefix);
+      },
+    });
+  }, []);
+
   const invalidateAllConfigQueries = useCallback(() => {
     logConfigSync("INFO", "Invalidating all config queries (reconnect catch-up)");
     ALL_CONFIG_QUERY_PREFIXES.forEach((prefix) => {
-      queryClient.invalidateQueries({ queryKey: [prefix] });
+      invalidateByPrefix(prefix);
     });
-  }, []);
+  }, [invalidateByPrefix]);
 
   const invalidateQueriesForCategory = useCallback((category: string, eventEnterpriseId?: string | number) => {
     if (enterpriseId && eventEnterpriseId && String(eventEnterpriseId) !== String(enterpriseId)) {
@@ -81,12 +95,12 @@ export function useConfigSync() {
     const queryKeys = CATEGORY_TO_QUERY_KEYS[category] || [];
     logConfigSync("INFO", `Config update: category=${category}, action=invalidate, keys=${queryKeys.join(", ") || "ALL"}`);
     queryKeys.forEach((key) => {
-      queryClient.invalidateQueries({ queryKey: [key] });
+      invalidateByPrefix(key);
     });
     if (queryKeys.length === 0) {
       queryClient.invalidateQueries();
     }
-  }, [enterpriseId]);
+  }, [enterpriseId, invalidateByPrefix]);
 
   const connect = useCallback(() => {
     if (isUnmountedRef.current) return;
