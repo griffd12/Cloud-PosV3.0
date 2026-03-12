@@ -549,8 +549,7 @@ export function createApiRoutes(
       if (!rvcId) {
         return res.status(400).json({ error: 'rvcId required' });
       }
-      const propertyId = caps.propertyId || (req.headers['x-property-id'] as string) || undefined;
-      const layout = config.getPosLayoutForRvc(rvcId, propertyId, orderType);
+      const layout = config.getPosLayoutForRvc(rvcId, orderType);
       if (!layout) {
         return res.status(404).json({ error: 'No layout found for RVC' });
       }
@@ -1785,9 +1784,9 @@ export function createApiRoutes(
           id: mg.id,
           name: mg.name,
           code: mg.code || null,
-          minRequired: mimg.min_required || mg.min_required || 0,
-          maxAllowed: mimg.max_allowed || mg.max_allowed || 0,
-          sortOrder: mimg.sort_order || mimg.display_order || 0,
+          minRequired: mimg.min_required ?? mg.min_required ?? 0,
+          maxAllowed: mimg.max_allowed ?? mg.max_allowed ?? 0,
+          sortOrder: mimg.sort_order ?? mimg.display_order ?? 0,
           modifiers: groupMods
         };
       }
@@ -2065,8 +2064,7 @@ export function createApiRoutes(
   });
   router.get('/pos-layouts/default/:rvcId', (req, res) => {
     try {
-      const propertyId = caps.propertyId || (req.headers['x-property-id'] as string) || undefined;
-      const layout = config.getPosLayoutForRvc(req.params.rvcId, propertyId);
+      const layout = config.getPosLayoutForRvc(req.params.rvcId);
       if (!layout) return res.status(404).json({ error: 'No layout found for rvc=' + req.params.rvcId });
       const cells = config.getPosLayoutCells(layout.id);
       res.json({ ...layout, cells });

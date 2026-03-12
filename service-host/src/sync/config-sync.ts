@@ -1041,7 +1041,7 @@ export class ConfigSync {
   }
   
   getPosLayoutForRvc(rvcId: string, orderType?: string): any | null {
-    return this.db.getPosLayoutForRvc(this.propertyId, rvcId, orderType);
+    return this.db.getPosLayoutForRvc(rvcId, this.propertyId, orderType);
   }
   
   getPosLayoutCells(layoutId: string): any[] {
