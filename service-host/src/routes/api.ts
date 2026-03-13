@@ -1741,7 +1741,7 @@ export function createApiRoutes(
   router.get('/pos/modifier-map', (_req, res) => {
     try {
       const menuItemModGroups = caps.db.all<any>(
-        'SELECT mimg.menu_item_id, mimg.modifier_group_id, mimg.sort_order, mimg.min_required, mimg.max_allowed FROM menu_item_modifier_groups mimg'
+        'SELECT mimg.menu_item_id, mimg.modifier_group_id, mimg.display_order, mimg.sort_order, mimg.min_required, mimg.max_allowed FROM menu_item_modifier_groups mimg'
       );
       const modGroups = caps.db.all<any>('SELECT * FROM modifier_groups');
       const modGroupMods = caps.db.all<any>(
@@ -1784,9 +1784,9 @@ export function createApiRoutes(
           id: mg.id,
           name: mg.name,
           code: mg.code || null,
-          minRequired: mimg.min_required || mg.min_required || 0,
-          maxAllowed: mimg.max_allowed || mg.max_allowed || 0,
-          sortOrder: mimg.sort_order || 0,
+          minRequired: mimg.min_required ?? mg.min_required ?? 0,
+          maxAllowed: mimg.max_allowed ?? mg.max_allowed ?? 0,
+          sortOrder: mimg.sort_order ?? mimg.display_order ?? 0,
           modifiers: groupMods
         };
       }
@@ -2065,7 +2065,7 @@ export function createApiRoutes(
   router.get('/pos-layouts/default/:rvcId', (req, res) => {
     try {
       const layout = config.getPosLayoutForRvc(req.params.rvcId);
-      if (!layout) return res.status(404).json({ error: 'No layout found' });
+      if (!layout) return res.status(404).json({ error: 'No layout found for rvc=' + req.params.rvcId });
       const cells = config.getPosLayoutCells(layout.id);
       res.json({ ...layout, cells });
     } catch (e) { res.status(500).json({ error: (e as Error).message }); }

@@ -553,6 +553,7 @@ class OfflineDatabase {
 
       CREATE TABLE IF NOT EXISTS enterprises (
         id TEXT PRIMARY KEY,
+        enterprise_id TEXT,
         data TEXT NOT NULL,
         updated_at TEXT DEFAULT (datetime('now'))
       );
@@ -566,6 +567,7 @@ class OfflineDatabase {
 
       CREATE TABLE IF NOT EXISTS privileges (
         id TEXT PRIMARY KEY,
+        enterprise_id TEXT,
         data TEXT NOT NULL,
         updated_at TEXT DEFAULT (datetime('now'))
       );
@@ -673,6 +675,8 @@ class OfflineDatabase {
       'kds_devices',
       'order_device_printers',
       'order_device_kds',
+      'enterprises',
+      'privileges',
     ];
 
     for (const table of enterpriseIdTables) {
@@ -950,6 +954,15 @@ class OfflineDatabase {
       );
     }
 
+    const allRvcs = this.getEntityList('revenue_centers', enterpriseId) || [];
+    for (const rvc of allRvcs) {
+      if (rvc.id && rvc.id !== rvcId) {
+        endpoints.push(
+          { key: `posLayout_default_${rvc.id}`, url: `/api/pos-layouts/default/${rvc.id}` },
+        );
+      }
+    }
+
     for (const ep of endpoints) {
       try {
         const controller = new AbortController();
@@ -982,10 +995,16 @@ class OfflineDatabase {
       }
     }
 
-    if (rvcId) {
+    const rvcIdsToSync = rvcId ? [rvcId] : [];
+    for (const rvc of allRvcs) {
+      if (rvc.id && !rvcIdsToSync.includes(rvc.id)) rvcIdsToSync.push(rvc.id);
+    }
+    const syncedLayoutIds = new Set();
+    for (const syncRvcId of rvcIdsToSync) {
       try {
-        const layoutData = this.getCachedConfig(`posLayout_default_${rvcId}`);
-        if (layoutData && layoutData.id) {
+        const layoutData = this.getCachedConfig(`posLayout_default_${syncRvcId}`);
+        if (layoutData && layoutData.id && !syncedLayoutIds.has(layoutData.id)) {
+          syncedLayoutIds.add(layoutData.id);
           const layoutId = layoutData.id;
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 15000);
@@ -996,12 +1015,12 @@ class OfflineDatabase {
           clearTimeout(timeout);
           if (cellsResponse.ok) {
             const cellsData = await cellsResponse.json();
-            this.cacheConfigData(`posLayoutCells_${layoutId}`, cellsData, enterpriseId, propertyId, rvcId);
+            this.cacheConfigData(`posLayoutCells_${layoutId}`, cellsData, enterpriseId, propertyId, syncRvcId);
             results.synced.push({ key: `posLayoutCells_${layoutId}` });
           }
         }
       } catch (e) {
-        results.errors.push({ endpoint: 'pos-layout-cells', error: e.message });
+        results.errors.push({ endpoint: `pos-layout-cells-${syncRvcId}`, error: e.message });
       }
     }
 

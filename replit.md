@@ -119,3 +119,6 @@ Key files: `electron/main.cjs` (LOCAL_FIRST patterns, CAPS proxy), `electron/off
 - Uber Eats
 - DoorDash
 - Grubhub
+
+## Current Electron Version
+- **v3.1.50** — Fixed offline blank screen (bundled asset serving), enterprises/privileges SQLite schema (missing enterprise_id column), and sync noise guard (skip syncFromCloud when not GREEN mode). Uses `/api/health/db-probe` for initial sync health check.
