@@ -121,4 +121,4 @@ Key files: `electron/main.cjs` (LOCAL_FIRST patterns, CAPS proxy), `electron/off
 - Grubhub
 
 ## Current Electron Version
-- **v3.1.51** — Fixed item ringing in CAPS/offline mode (missing `total_price` in addItems INSERT), transaction sync infinite resubmit loop (skipped-response handling in syncCheck/syncPayment), non-check operation sync log flooding (backoff with `last_failed_at` tracking). Prior v3.1.50 fixes: offline blank screen (bundled asset serving), enterprises/privileges SQLite schema, sync noise guard.
+- **v3.1.52** — Hardened addItems total_price computation with multi-fallback price resolution (priceOverride → unitPrice → menuItem.price) and NaN/Infinity guard (falls back to 0 with warning log). Fixed `/api/health` returning 404 in YELLOW mode (added explicit app-level `/api/health` route). Fixed service-charges endpoint returning 500 (added missing `voided` column to `check_service_charges` table schema + migration fixup). Added missing `POST /api/item-availability/increment` endpoint for item availability rollback. All fixes applied to both CJS runtime and TypeScript source.

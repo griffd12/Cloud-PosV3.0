@@ -14,7 +14,7 @@
 // CONFIGURATION TABLES (Synced from cloud)
 // =============================================================================
 
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 export const CREATE_SCHEMA_SQL = `
 -- Schema version tracking
@@ -609,6 +609,7 @@ CREATE TABLE IF NOT EXISTS check_service_charges (
   charge_type TEXT NOT NULL,
   amount INTEGER NOT NULL,
   auto_applied INTEGER DEFAULT 0,
+  voided INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
