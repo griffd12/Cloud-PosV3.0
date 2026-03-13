@@ -159,6 +159,10 @@ export class Database {
       this.migrateToV9();
     }
     
+    if (fromVersion < 10) {
+      this.migrateToV10();
+    }
+    
     this.run('INSERT INTO schema_version (version) VALUES (?)', [toVersion]);
   }
   
@@ -389,6 +393,17 @@ export class Database {
       this.run('CREATE INDEX IF NOT EXISTS idx_pos_layouts_property ON pos_layouts(property_id)');
     } catch (e) { /* indexes may already exist */ }
     console.log('[DB] v9 migration complete');
+  }
+  
+  private migrateToV10(): void {
+    console.log('[DB] Running v10 migration: check_service_charges.voided column');
+    try {
+      this.run('ALTER TABLE check_service_charges ADD COLUMN voided INTEGER DEFAULT 0');
+      console.log('[DB] Added check_service_charges.voided column');
+    } catch (e) {
+      // Column may already exist
+    }
+    console.log('[DB] v10 migration complete');
   }
   
   // ==========================================================================
