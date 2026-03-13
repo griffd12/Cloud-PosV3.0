@@ -243,7 +243,7 @@ export class CapsService {
       
       const unitPrice = item.priceOverride || menuItem.price;
       const qty = item.quantity || 1;
-      const totalPrice = Math.round(qty * parseFloat(unitPrice as any));
+      const totalPrice = Math.round(qty * parseFloat(String(unitPrice)));
       const modifiersJson = JSON.stringify(item.modifiers || []);
       const now = new Date().toISOString();
       
