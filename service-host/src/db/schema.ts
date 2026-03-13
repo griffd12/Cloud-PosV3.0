@@ -609,6 +609,7 @@ CREATE TABLE IF NOT EXISTS check_service_charges (
   charge_type TEXT NOT NULL,
   amount INTEGER NOT NULL,
   auto_applied INTEGER DEFAULT 0,
+  voided INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
