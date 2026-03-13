@@ -121,4 +121,4 @@ Key files: `electron/main.cjs` (LOCAL_FIRST patterns, CAPS proxy), `electron/off
 - Grubhub
 
 ## Current Electron Version
-- **v3.1.50** — Fixed offline blank screen (bundled asset serving), enterprises/privileges SQLite schema (missing enterprise_id column), and sync noise guard (skip syncFromCloud when not GREEN mode). Uses `/api/health/db-probe` for initial sync health check.
+- **v3.1.51** — Fixed item ringing in CAPS/offline mode (missing `total_price` in addItems INSERT), transaction sync infinite resubmit loop (skipped-response handling in syncCheck/syncPayment), non-check operation sync log flooding (backoff with `last_failed_at` tracking). Prior v3.1.50 fixes: offline blank screen (bundled asset serving), enterprises/privileges SQLite schema, sync noise guard.
