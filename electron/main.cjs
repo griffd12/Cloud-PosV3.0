@@ -2312,17 +2312,24 @@ async function performInitialDataSync() {
     return;
   }
 
+  if (connectionMode !== 'green') {
+    appLogger.info('OfflineDB', `Skipping initial sync (mode: ${connectionMode}), using cached data`);
+    return;
+  }
+
   try {
     const serverUrl = getServerUrl();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    const response = await fetch(`${serverUrl}/api/health`, { signal: controller.signal });
+    const response = await fetch(`${serverUrl}/api/health/db-probe`, { signal: controller.signal });
     clearTimeout(timeout);
 
     if (response.ok && enhancedOfflineDb) {
-      appLogger.info('OfflineDB', 'Cloud reachable, starting initial data sync');
+      appLogger.info('OfflineDB', 'Cloud reachable (db-probe OK), starting initial data sync');
       const result = await enhancedOfflineDb.syncFromCloud(serverUrl, enterpriseId, propertyId, rvcId);
       appLogger.info('OfflineDB', 'Initial sync completed', { tables: result.synced?.length || 0, errors: result.errors?.length || 0 });
+    } else {
+      appLogger.warn('OfflineDB', `Cloud health check failed (status: ${response?.status}), skipping initial sync`);
     }
   } catch (e) {
     appLogger.warn('OfflineDB', 'Cloud not reachable for initial sync, using cached data');
