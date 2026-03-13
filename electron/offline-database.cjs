@@ -553,6 +553,7 @@ class OfflineDatabase {
 
       CREATE TABLE IF NOT EXISTS enterprises (
         id TEXT PRIMARY KEY,
+        enterprise_id TEXT,
         data TEXT NOT NULL,
         updated_at TEXT DEFAULT (datetime('now'))
       );
@@ -566,6 +567,7 @@ class OfflineDatabase {
 
       CREATE TABLE IF NOT EXISTS privileges (
         id TEXT PRIMARY KEY,
+        enterprise_id TEXT,
         data TEXT NOT NULL,
         updated_at TEXT DEFAULT (datetime('now'))
       );
@@ -673,6 +675,8 @@ class OfflineDatabase {
       'kds_devices',
       'order_device_printers',
       'order_device_kds',
+      'enterprises',
+      'privileges',
     ];
 
     for (const table of enterpriseIdTables) {

@@ -2722,6 +2722,76 @@ function routeToOfflineInterceptor(method, url, body) {
   });
 }
 
+const MIME_TYPES = {
+  '.html': 'text/html',
+  '.js': 'application/javascript',
+  '.mjs': 'application/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.eot': 'application/vnd.ms-fontobject',
+  '.map': 'application/json',
+  '.txt': 'text/plain',
+  '.webp': 'image/webp',
+};
+
+function getBundledAssetsDir() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'app.asar', 'dist', 'public');
+  }
+  return path.join(__dirname, '..', 'dist', 'public');
+}
+
+function serveBundledAsset(pathname) {
+  try {
+    const assetsDir = getBundledAssetsDir();
+    let filePath;
+
+    if (pathname === '/' || pathname === '') {
+      filePath = path.join(assetsDir, 'index.html');
+    } else {
+      const safePath = pathname.replace(/\.\./g, '').replace(/\/\//g, '/');
+      filePath = path.join(assetsDir, safePath);
+    }
+
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      const ext = path.extname(filePath).toLowerCase();
+      const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+      const buffer = fs.readFileSync(filePath);
+      appLogger.debug('BundledAssets', `Serving bundled: ${pathname} (${contentType})`);
+      return new Response(buffer, {
+        status: 200,
+        headers: { 'Content-Type': contentType, 'X-Bundled-Asset': 'true' },
+      });
+    }
+
+    if (!pathname.includes('.') || pathname === '/pos' || pathname === '/kds' || pathname === '/pos/' || pathname === '/kds/') {
+      const indexPath = path.join(assetsDir, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        const buffer = fs.readFileSync(indexPath);
+        appLogger.debug('BundledAssets', `SPA fallback for: ${pathname}`);
+        return new Response(buffer, {
+          status: 200,
+          headers: { 'Content-Type': 'text/html', 'X-Bundled-Asset': 'true', 'X-SPA-Fallback': 'true' },
+        });
+      }
+    }
+
+    return null;
+  } catch (e) {
+    appLogger.debug('BundledAssets', `Error serving ${pathname}: ${e.message}`);
+    return null;
+  }
+}
+
 function registerProtocolInterceptor() {
   if (protocolInterceptorRegistered) return;
   protocolInterceptorRegistered = true;
@@ -2889,6 +2959,11 @@ function registerProtocolInterceptor() {
       if (cached) {
         appLogger.debug('PageCache', `Serving cached (offline): ${url.pathname}`);
         return cached;
+      }
+      const bundled = serveBundledAsset(url.pathname);
+      if (bundled) {
+        appLogger.info('BundledAssets', `Serving bundled asset (offline): ${url.pathname}`);
+        return bundled;
       }
     }
 
@@ -3087,15 +3162,21 @@ function registerProtocolInterceptor() {
       const cached = getCachedResponseFromDisk(url.pathname);
       if (cached) return cached;
 
+      const bundled = serveBundledAsset(url.pathname);
+      if (bundled) {
+        appLogger.info('BundledAssets', `Serving bundled asset (network error fallback): ${url.pathname}`);
+        return bundled;
+      }
+
       if (!url.pathname.includes('.')) {
-        appLogger.warn('PageCache', `No cached page for: ${url.pathname}, serving offline fallback`);
+        appLogger.warn('PageCache', `No cached page or bundled asset for: ${url.pathname}, serving offline fallback`);
         return new Response(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cloud POS - Offline</title>
 <style>body{font-family:system-ui;background:#0f1729;color:#e0e0e0;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center}
 .c{max-width:480px;padding:40px}h1{margin-bottom:12px}p{opacity:0.8;line-height:1.6;margin-bottom:20px}
 button{padding:12px 32px;font-size:16px;border:1px solid #4a4a6a;border-radius:8px;background:#2a2a4a;color:#fff;cursor:pointer}
 button:hover{background:#3a3a5a}.info{margin-top:20px;font-size:13px;opacity:0.5}</style></head>
 <body><div class="c"><h1>Cloud POS Offline</h1>
-<p>The server is unreachable and no cached pages are available. Please connect to the internet at least once to cache the POS application.</p>
+<p>The server is unreachable and no bundled or cached pages are available. Please reinstall the application or connect to the internet.</p>
 <button onclick="location.reload()">Retry Connection</button>
 <p class="info">Once connected, the app will automatically cache itself for offline use.</p></div></body></html>`, {
           status: 503,
@@ -3191,7 +3272,7 @@ async function initAllServices() {
   startBackgroundSyncWorker();
 
   dataSyncInterval = setInterval(async () => {
-    if (isOnline && enhancedOfflineDb) {
+    if (isOnline && connectionMode === 'green' && enhancedOfflineDb) {
       const cfg = loadConfig();
       if (cfg.enterpriseId) {
         try {
@@ -3200,6 +3281,8 @@ async function initAllServices() {
           appLogger.warn('OfflineDB', 'Periodic sync failed', e.message);
         }
       }
+    } else if (connectionMode !== 'green' && enhancedOfflineDb) {
+      appLogger.debug('OfflineDB', `Skipping periodic sync (mode: ${connectionMode})`);
     }
   }, 300000);
 
