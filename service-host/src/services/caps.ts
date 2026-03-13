@@ -241,14 +241,14 @@ export class CapsService {
         continue;
       }
       
-      const rawPrice = item.priceOverride != null ? item.priceOverride : ((item as any).unitPrice != null ? (item as any).unitPrice : menuItem.price);
-      const unitPrice = typeof rawPrice === 'number' ? rawPrice : (parseFloat(String(rawPrice)) || 0);
-      const qty = item.quantity || 1;
-      const computedTotal = qty * unitPrice;
-      const totalPrice = Number.isFinite(computedTotal) ? Math.round(computedTotal) : 0;
-      if (!Number.isFinite(computedTotal)) {
-        console.warn(`[CAPS] addItems: totalPrice fallback to 0 for item ${menuItem.name} (rawPrice=${rawPrice}, unitPrice=${unitPrice}, qty=${qty})`);
+      const rawPrice = item.priceOverride != null ? item.priceOverride : (item.unitPrice != null ? item.unitPrice : menuItem.price);
+      const parsedPrice = typeof rawPrice === 'number' ? rawPrice : parseFloat(String(rawPrice));
+      const unitPrice = Number.isFinite(parsedPrice) ? parsedPrice : 0;
+      if (!Number.isFinite(parsedPrice)) {
+        console.warn(`[CAPS] addItems: unitPrice fallback to 0 for item ${menuItem.name} — rawPrice=${rawPrice} is not a valid number`);
       }
+      const qty = item.quantity || 1;
+      const totalPrice = Math.round(qty * unitPrice);
       const modifiersJson = JSON.stringify(item.modifiers || []);
       const now = new Date().toISOString();
       
@@ -652,6 +652,7 @@ interface AddItemParams {
   modifiers?: any[];
   seatNumber?: number;
   priceOverride?: number;
+  unitPrice?: number | string;
 }
 
 interface AddPaymentParams {
