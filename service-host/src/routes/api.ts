@@ -2082,6 +2082,9 @@ export function createApiRoutes(
   router.post('/item-availability/decrement', (_req, res) => {
     res.json({ success: true });
   });
+  router.post('/item-availability/increment', (_req, res) => {
+    res.json({ success: true });
+  });
   router.get('/break-rules', (_req, res) => {
     res.json([]);
   });
