@@ -1,0 +1,1247 @@
+
+====================================================================================================
+  [APP] APPLICATION STARTUP - 2026-03-13T19:49:35.083Z
+====================================================================================================
+[2026-03-13T19:49:35.084Z] [INFO ] [APP         ] [App] Cloud POS starting | DATA: {"version":"3.1.51","mode":"pos","kiosk":false,"platform":"win32"}
+[2026-03-13T19:49:35.087Z] [INFO ] [APP         ] [App] Directories | DATA: {"config":"C:\\Users\\DG\\AppData\\Local\\Cloud POS\\config","data":"C:\\Users\\DG\\AppData\\Local\\Cloud POS\\data","logs":"C:\\Users\\DG\\AppData\\Local\\Cloud POS\\logs"}
+[2026-03-13T19:49:35.093Z] [INFO ] [APP         ] [App] Setup previously completed, initializing all services
+[2026-03-13T19:49:35.101Z] [INFO ] [APP         ] [AutoStartup] Registered "Cloud POS" for auto-startup on boot | DATA: {"exePath":"C:\\Program Files\\Cloud POS\\Cloud POS\\Cloud POS.exe","mode":"pos"}
+[2026-03-13T19:49:35.105Z] [WARN ] [APP         ] [AutoStartup] Upgrade migration: auto-startup registration could not be confirmed, will retry on next launch
+[2026-03-13T19:49:35.108Z] [INFO ] [APP         ] [App] Initializing services after setup verification
+[2026-03-13T19:49:35.111Z] [INFO ] [APP         ] [CAPS] Loaded cached CAPS config | DATA: {"serviceHostUrl":"http://127.0.0.1:3001","isCaps":true}
+[2026-03-13T19:49:35.557Z] [INFO ] [APP         ] [OfflineDB] SQLite database initialized | DATA: {"path":"C:\\Users\\DG\\AppData\\Local\\Cloud POS\\data\\offline.db"}
+[2026-03-13T19:49:35.561Z] [INFO ] [OFFLINEDB   ] [Init] better-sqlite3 native module loaded successfully
+[2026-03-13T19:49:35.566Z] [WARN ] [OFFLINEDB   ] [Encryption] keytar not available for Credential Manager, using file-based key | DATA: Cannot find module 'keytar'
+Require stack:
+- C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\offline-database.cjs
+- C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\main.cjs
+- 
+[2026-03-13T19:49:35.569Z] [WARN ] [OFFLINEDB   ] [Encryption] better-sqlite3 not compiled with SQLCipher. To enable encryption, rebuild with: npm rebuild better-sqlite3 --build-from-source --sqlite3=sqlcipher
+[2026-03-13T19:49:35.609Z] [INFO ] [OFFLINEDB   ] [Migration] Added last_failed_at column to offline_queue
+[2026-03-13T19:49:35.615Z] [INFO ] [OFFLINEDB   ] [Init] SQLite database initialized | DATA: C:\Users\DG\AppData\Local\Cloud POS\data\offline.db
+[2026-03-13T19:49:35.624Z] [INFO ] [OFFLINEDB   ] [Init] Encryption: DISABLED (build with SQLCipher to enable)
+[2026-03-13T19:49:35.643Z] [INFO ] [APP         ] [OfflineDB] Enhanced offline database initialized
+[2026-03-13T19:49:35.657Z] [INFO ] [PRINT       ] [Service] Starting print agent service
+[2026-03-13T19:49:35.878Z] [INFO ] [PRINT       ] [Connect] Connecting to wss://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev/ws/print-agents
+[2026-03-13T19:49:35.988Z] [INFO ] [APP         ] [Connectivity] Check interval set to 15s (mode: green)
+[2026-03-13T19:49:36.093Z] [INFO ] [APP         ] [Sync] Background sync worker started (5s interval, syncs to CAPS in GREEN/YELLOW)
+[2026-03-13T19:49:36.338Z] [INFO ] [PRINT       ] [Connect] WebSocket connected, authenticating
+[2026-03-13T19:49:36.357Z] [INFO ] [APP         ] [OfflineDB] Cloud reachable (db-probe OK), starting initial data sync
+[2026-03-13T19:49:36.359Z] [INFO ] [OFFLINEDB   ] [Sync] Starting full sync from cloud...
+[2026-03-13T19:49:36.435Z] [INFO ] [PRINT       ] [Auth] Authenticated as: SNS-001-WS01 (Embedded Agent) (58663b6c-dc06-4ec2-848f-dfd0c2dbdcf4)
+[2026-03-13T19:49:36.438Z] [INFO ] [PRINT       ] [Status] connected=true, auth=true
+[2026-03-13T19:49:36.452Z] [INFO ] [PRINT       ] [Job] Received job a35e84fa-ba91-4d3e-950b-38216a690326 | DATA: {"printer":"Star TSP100 CUTTER (TSP143)","connectionType":"windows_printer"}
+[2026-03-13T19:49:36.455Z] [INFO ] [PRINT       ] [Job] BEL (Star drawer kick) DETECTED in job a35e84fa-ba91-4d3e-950b-38216a690326 at offset 915 | DATA: {"printer":"Star TSP100 CUTTER (TSP143)"}
+[2026-03-13T19:49:36.457Z] [INFO ] [PRINT       ] [Job] ESC p (drawer kick) DETECTED in job a35e84fa-ba91-4d3e-950b-38216a690326 at offset 916: pin=pin2 | DATA: {"printer":"Star TSP100 CUTTER (TSP143)"}
+[2026-03-13T19:49:36.459Z] [INFO ] [PRINT       ] [Job] Drawer kick scan for job a35e84fa-ba91-4d3e-950b-38216a690326: 1 ESC_p + 1 BEL kicks in 927 bytes
+[2026-03-13T19:49:36.461Z] [INFO ] [PRINT       ] [Job] Job a35e84fa-ba91-4d3e-950b-38216a690326 sending 927 bytes to Windows printer | DATA: {"printer":"Star TSP100 CUTTER (TSP143)"}
+[2026-03-13T19:49:36.464Z] [INFO ] [PRINT       ] [WindowsPrint] Wrote 927 bytes to temp file C:\Users\DG\AppData\Local\Temp\cloudpos_print_1773431376463.bin
+[2026-03-13T19:49:36.541Z] [INFO ] [PRINT       ] [Job] Received job 516de7eb-900f-42d9-8a5c-e3515ed9a7a9 | DATA: {"printer":"Star TSP100 CUTTER (TSP143)","connectionType":"windows_printer"}
+[2026-03-13T19:49:36.543Z] [INFO ] [PRINT       ] [Job] BEL (Star drawer kick) DETECTED in job 516de7eb-900f-42d9-8a5c-e3515ed9a7a9 at offset 870 | DATA: {"printer":"Star TSP100 CUTTER (TSP143)"}
+[2026-03-13T19:49:36.545Z] [INFO ] [PRINT       ] [Job] ESC p (drawer kick) DETECTED in job 516de7eb-900f-42d9-8a5c-e3515ed9a7a9 at offset 871: pin=pin2 | DATA: {"printer":"Star TSP100 CUTTER (TSP143)"}
+[2026-03-13T19:49:36.548Z] [INFO ] [PRINT       ] [Job] Drawer kick scan for job 516de7eb-900f-42d9-8a5c-e3515ed9a7a9: 1 ESC_p + 1 BEL kicks in 882 bytes
+[2026-03-13T19:49:36.551Z] [INFO ] [PRINT       ] [Job] Job 516de7eb-900f-42d9-8a5c-e3515ed9a7a9 sending 882 bytes to Windows printer | DATA: {"printer":"Star TSP100 CUTTER (TSP143)"}
+[2026-03-13T19:49:36.554Z] [INFO ] [PRINT       ] [WindowsPrint] Wrote 882 bytes to temp file C:\Users\DG\AppData\Local\Temp\cloudpos_print_1773431376553.bin
+[2026-03-13T19:49:36.579Z] [INFO ] [PRINT       ] [Job] Received job ebb54131-f629-4829-9d69-b4cc18f5ced8 | DATA: {"printer":"Star TSP100 CUTTER (TSP143)","connectionType":"windows_printer"}
+[2026-03-13T19:49:36.581Z] [INFO ] [PRINT       ] [Job] BEL (Star drawer kick) DETECTED in job ebb54131-f629-4829-9d69-b4cc18f5ced8 at offset 828 | DATA: {"printer":"Star TSP100 CUTTER (TSP143)"}
+[2026-03-13T19:49:36.583Z] [INFO ] [PRINT       ] [Job] ESC p (drawer kick) DETECTED in job ebb54131-f629-4829-9d69-b4cc18f5ced8 at offset 829: pin=pin2 | DATA: {"printer":"Star TSP100 CUTTER (TSP143)"}
+[2026-03-13T19:49:36.586Z] [INFO ] [PRINT       ] [Job] Drawer kick scan for job ebb54131-f629-4829-9d69-b4cc18f5ced8: 1 ESC_p + 1 BEL kicks in 840 bytes
+[2026-03-13T19:49:36.588Z] [INFO ] [PRINT       ] [Job] Job ebb54131-f629-4829-9d69-b4cc18f5ced8 sending 840 bytes to Windows printer | DATA: {"printer":"Star TSP100 CUTTER (TSP143)"}
+[2026-03-13T19:49:36.591Z] [INFO ] [PRINT       ] [WindowsPrint] Wrote 840 bytes to temp file C:\Users\DG\AppData\Local\Temp\cloudpos_print_1773431376591.bin
+[2026-03-13T19:49:40.605Z] [INFO ] [OFFLINEDB   ] [Sync] Sync complete. 56 tables synced, 0 errors
+[2026-03-13T19:49:40.609Z] [INFO ] [APP         ] [OfflineDB] Initial sync completed | DATA: {"tables":56,"errors":0}
+[2026-03-13T19:49:41.074Z] [INFO ] [APP         ] [Interceptor] Service host URL set: http://127.0.0.1:3001
+[2026-03-13T19:49:41.076Z] [INFO ] [APP         ] [CAPS] Activation config fetched | DATA: {"serviceHostUrl":"http://127.0.0.1:3001","capsWorkstationId":"32fb06f3-837f-42ed-a6f5-90436ca62e06","capsWorkstationName":"SNS-001-WS01","isCaps":true}
+[2026-03-13T19:49:41.109Z] [INFO ] [APP         ] [ServiceHost] Starting embedded service host (CAPS mode) | DATA: {"dataDir":"C:\\Users\\DG\\AppData\\Local\\Cloud POS\\data\\service-host","port":3001,"cloudUrl":"https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev"}
+[2026-03-13T19:49:44.145Z] [INFO ] [APP         ] [ServiceHost] ============================================================
+[2026-03-13T19:49:44.148Z] [INFO ] [APP         ] [ServiceHost] Cloud POS Service Host v1.0.0
+============================================================
+Cloud URL: https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev
+Service Host ID: 7cfb0d8b-73e4-4950-9baa-12f020e8deba
+Property ID: b0c038b1-5c55-4c63-85fe-5ea9dc64a767
+Data Directory: C:\Users\DG\AppData\Local\Cloud POS\data\service-host
+[2026-03-13T19:49:44.150Z] [INFO ] [APP         ] [ServiceHost] CAL Root Directory: C:\OPS-POS
+
+[DB] Database already initialized in constructor
+Database initialized
+[2026-03-13T19:49:44.488Z] [INFO ] [APP         ] [ServiceHost] WebSocket connected to cloud
+[2026-03-13T19:49:44.538Z] [INFO ] [APP         ] [ServiceHost] Authenticated with cloud
+[2026-03-13T19:49:44.541Z] [INFO ] [APP         ] [ServiceHost] Connected to cloud
+Starting full configuration sync for property b0c038b1-5c55-4c63-85fe-5ea9dc64a767...
+[2026-03-13T19:49:45.211Z] [INFO ] [APP         ] [ServiceHost] [ConfigSync] Raw response keys: configVersion, timestamp, data
+[ConfigSync] Inner data keys: enterprise, property, revenueCenters, employees, roles, menuItems, modifierGroups, modifiers, modifierGroupModifiers, menuItemModifierGroups, slus, taxGroups, tenders, discounts, serviceCharges, printers, kdsDevices, workstations, printClasses, orderDevices, orderDevicePrinters, orderDeviceKds, printClassRouting, jobCodes, posLayouts, posLayoutCells, posLayoutRvcAssignments
+[ConfigSync] Enterprise: Blue Oceans Management (587bd7b1-db7e-487c-b1f7-2315ab093502)
+[2026-03-13T19:49:45.214Z] [INFO ] [APP         ] [ServiceHost] [ConfigSync] Property: SNS-Newport Beach (b0c038b1-5c55-4c63-85fe-5ea9dc64a767)
+[ConfigSync] Mapped entity arrays: enterprises:1, properties:1, rvcs:1, slus:5, menuItems:26, modifierGroups:6, modifiers:34, modifierGroupModifiers:39, menuItemModifierGroups:40, printClasses:4, employees:7, roles:2, jobCodes:4, workstations:3, printers:2, kdsDevices:3, orderDevices:3, printClassRouting:5, taxGroups:2, tenders:4, discounts:4, posLayouts:1, posLayoutCells:26, posLayoutRvcAssignments:1
+  Synced 1 enterprises
+[2026-03-13T19:49:45.346Z] [INFO ] [APP         ] [ServiceHost] Synced 1 properties
+[2026-03-13T19:49:45.349Z] [INFO ] [APP         ] [ServiceHost] Synced 1 revenue centers
+[2026-03-13T19:49:45.352Z] [INFO ] [APP         ] [ServiceHost] Synced 5 SLUs
+[2026-03-13T19:49:45.362Z] [INFO ] [APP         ] [ServiceHost] Synced 26 menu items
+[2026-03-13T19:49:45.364Z] [INFO ] [APP         ] [ServiceHost] Synced 6 modifier groups
+[2026-03-13T19:49:45.372Z] [INFO ] [APP         ] [ServiceHost] Synced 34 modifiers
+[2026-03-13T19:49:45.381Z] [INFO ] [APP         ] [ServiceHost] Synced 39 modifier group assignments
+[2026-03-13T19:49:45.389Z] [INFO ] [APP         ] [ServiceHost] Synced 40 menu item modifier groups
+[2026-03-13T19:49:45.392Z] [INFO ] [APP         ] [ServiceHost] Synced 4 print classes
+  Synced 2 roles
+[2026-03-13T19:49:45.395Z] [INFO ] [APP         ] [ServiceHost] Synced 7 employees
+[2026-03-13T19:49:45.398Z] [INFO ] [APP         ] [ServiceHost] Synced 4 job codes
+  Synced 3 workstations
+[2026-03-13T19:49:45.401Z] [INFO ] [APP         ] [ServiceHost] Synced 2 printers
+  Synced 3 KDS devices
+[2026-03-13T19:49:45.404Z] [INFO ] [APP         ] [ServiceHost] Synced 3 order devices
+  Synced 0 order device printers
+  Synced 0 order device KDS
+  Synced 5 print class routings
+[2026-03-13T19:49:45.407Z] [INFO ] [APP         ] [ServiceHost] Synced 2 tax groups
+[2026-03-13T19:49:45.411Z] [INFO ] [APP         ] [ServiceHost] Synced 4 tenders
+[2026-03-13T19:49:45.414Z] [INFO ] [APP         ] [ServiceHost] Synced 4 discounts
+  Synced 0 service charges
+  Synced 1 POS layouts
+[2026-03-13T19:49:45.422Z] [INFO ] [APP         ] [ServiceHost] Synced 26 POS layout cells
+[2026-03-13T19:49:45.425Z] [INFO ] [APP         ] [ServiceHost] Synced 1 POS layout RVC assignments
+Full sync complete: 224 records, version 1
+Configuration synced from cloud
+[CAL] Starting CAL sync service
+[CAL] Root directory: C:\OPS-POS
+[2026-03-13T19:49:45.618Z] [INFO ] [APP         ] [ServiceHost] [CAL] Found 0 pending deployment(s)
+CAL deployment sync started
+[2026-03-13T19:49:45.623Z] [INFO ] [APP         ] [ServiceHost] [36m[2026-03-13T19:49:45.617Z] [INFO] [ServiceHost:TransactionSync][0m Starting transaction sync worker... {"interval":5000}
+[2026-03-13T19:49:45.626Z] [INFO ] [APP         ] [ServiceHost] CAPS device tracker started
+[2026-03-13T19:49:45.634Z] [INFO ] [APP         ] [ServiceHost] Service Host listening on http://0.0.0.0:3001
+
+Available endpoints:
+  GET  /health              - Health check
+  POST /api/caps/checks     - Create check
+  GET  /api/caps/checks     - List open checks
+  POST /api/caps/checks/:id/items - Add items
+  POST /api/caps/checks/:id/send  - Send to kitchen
+  POST /api/caps/checks/:id/pay   - Process payment
+  POST /api/print/jobs      - Submit print job
+  GET  /api/kds/tickets     - Get KDS tickets
+  POST /api/payment/authorize - Authorize payment
+  GET  /api/caps/connected-devices - CAPS device tracker
+  POST /api/caps/sync/check-state  - WS check sync
+  POST /api/caps/sync/queue-operation - WS operation sync
+  WS   /ws                  - Real-time updates
+[2026-03-13T19:49:45.705Z] [ERROR] [PRINT       ] [WindowsPrint] PowerShell failed: $ErrorActionPreference = 'Stop'
+          try {
+            $printerName = 'Star TSP100 CUTTER (TSP143)'
+            Add-Type -TypeDefinition @'
+            using System;
+            using System.Runtime.InteropServices;
+            public class RawPrinterHelper {
+              [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+              public struct DOCINFOW {
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDocName;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pOutputFile;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDataType;
+              }
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool StartDocPrinter(IntPtr hPrinter, int level, ref DOCINFOW pDocInfo);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool StartPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndDocPrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool ClosePrinter(IntPtr hPrinter);
+              public static bool SendBytesToPrinter(string printerName, byte[] data) {
+                IntPtr hPrinter;
+                if (!OpenPrinter(printerName, out hPrinter, IntPtr.Zero)) {
+                  throw new Exception("OpenPrinter failed for: " + printerName + " (error " + 
+Marshal.GetLastWin32Error() + ")");
+                }
+                try {
+                  DOCINFOW di = new DOCINFOW();
+                  di.pDocName = "CloudPOS RAW Document";
+                  di.pDataType = "RAW";
+                  di.pOutputFile = null;
+                  if (!StartDocPrinter(hPrinter, 1, ref di)) {
+                    throw new Exception("StartDocPrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                  }
+                  try {
+                    if (!StartPagePrinter(hPrinter)) {
+                      throw new Exception("StartPagePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                    }
+                    IntPtr pBytes = Marshal.AllocHGlobal(data.Length);
+                    try {
+                      Marshal.Copy(data, 0, pBytes, data.Length);
+                      int written;
+                      if (!WritePrinter(hPrinter, pBytes, data.Length, out written)) {
+                        throw new Exception("WritePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                      }
+                    } finally {
+                      Marshal.FreeHGlobal(pBytes);
+                    }
+                    EndPagePrinter(hPrinter);
+                  } finally {
+                    EndDocPrinter(hPrinter);
+                  }
+                } finally {
+                  ClosePrinter(hPrinter);
+                }
+                return true;
+              }
+            }
+'@
+            $rawData = 
+[System.IO.File]::ReadAllBytes('C:\\Users\\DG\\AppData\\Local\\Temp\\cloudpos_print_1773431376463.bin')
+            Write-Host "Sending $($rawData.Length) bytes to printer '$printerName' via Windows Print Spooler"
+            [RawPrinterHelper]::SendBytesToPrinter($printerName, $rawData)
+            Write-Host "SUCCESS"
+          } catch {
+            Write-Error $_.Exception.Message
+            exit 1
+          }
+         : Exception calling "SendBytesToPrinter" with "2" argument(s): "OpenPrinter failed for: Star TSP100 CUTTER 
+(TSP143) (error 1801)"
+At line:83 char:13
++             Write-Error $_.Exception.Message
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException
+[2026-03-13T19:49:45.708Z] [ERROR] [PRINT       ] [WindowsPrint] stdout: Sending 927 bytes to printer 'Star TSP100 CUTTER (TSP143)' via Windows Print Spooler
+[2026-03-13T19:49:45.711Z] [ERROR] [PRINT       ] [Job] Job a35e84fa-ba91-4d3e-950b-38216a690326 Windows printer failed: Windows printer "Star TSP100 CUTTER (TSP143)" failed: $ErrorActionPreference = 'Stop'
+          try {
+            $printerName = 'Star TSP100 CUTTER (TSP143)'
+            Add-Type -TypeDefinition @'
+            using System;
+            using System.Runtime.InteropServices;
+            public class RawPrinterHelper {
+              [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+              public struct DOCINFOW {
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDocName;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pOutputFile;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDataType;
+              }
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool StartDocPrinter(IntPtr hPrinter, int level, ref DOCINFOW pDocInfo);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool StartPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndDocPrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool ClosePrinter(IntPtr hPrinter);
+              public static bool SendBytesToPrinter(string printerName, byte[] data) {
+                IntPtr hPrinter;
+                if (!OpenPrinter(printerName, out hPrinter, IntPtr.Zero)) {
+                  throw new Exception("OpenPrinter failed for: " + printerName + " (error " + 
+Marshal.GetLastWin32Error() + ")");
+                }
+                try {
+                  DOCINFOW di = new DOCINFOW();
+                  di.pDocName = "CloudPOS RAW Document";
+                  di.pDataType = "RAW";
+                  di.pOutputFile = null;
+                  if (!StartDocPrinter(hPrinter, 1, ref di)) {
+                    throw new Exception("StartDocPrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                  }
+                  try {
+                    if (!StartPagePrinter(hPrinter)) {
+                      throw new Exception("StartPagePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                    }
+                    IntPtr pBytes = Marshal.AllocHGlobal(data.Length);
+                    try {
+                      Marshal.Copy(data, 0, pBytes, data.Length);
+                      int written;
+                      if (!WritePrinter(hPrinter, pBytes, data.Length, out written)) {
+                        throw new Exception("WritePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                      }
+                    } finally {
+                      Marshal.FreeHGlobal(pBytes);
+                    }
+                    EndPagePrinter(hPrinter);
+                  } finally {
+                    EndDocPrinter(hPrinter);
+                  }
+                } finally {
+                  ClosePrinter(hPrinter);
+                }
+                return true;
+              }
+            }
+'@
+            $rawData = 
+[System.IO.File]::ReadAllBytes('C:\\Users\\DG\\AppData\\Local\\Temp\\cloudpos_print_1773431376463.bin')
+            Write-Host "Sending $($rawData.Length) bytes to printer '$printerName' via Windows Print Spooler"
+            [RawPrinterHelper]::SendBytesToPrinter($printerName, $rawData)
+            Write-Host "SUCCESS"
+          } catch {
+            Write-Error $_.Exception.Message
+            exit 1
+          }
+         : Exception calling "SendBytesToPrinter" with "2" argument(s): "OpenPrinter failed for: Star TSP100 CUTTER 
+(TSP143) (error 1801)"
+At line:83 char:13
++             Write-Error $_.Exception.Message
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException
+[2026-03-13T19:49:45.715Z] [ERROR] [PRINT       ] [WindowsPrint] PowerShell failed: $ErrorActionPreference = 'Stop'
+          try {
+            $printerName = 'Star TSP100 CUTTER (TSP143)'
+            Add-Type -TypeDefinition @'
+            using System;
+            using System.Runtime.InteropServices;
+            public class RawPrinterHelper {
+              [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+              public struct DOCINFOW {
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDocName;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pOutputFile;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDataType;
+              }
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool StartDocPrinter(IntPtr hPrinter, int level, ref DOCINFOW pDocInfo);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool StartPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndDocPrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool ClosePrinter(IntPtr hPrinter);
+              public static bool SendBytesToPrinter(string printerName, byte[] data) {
+                IntPtr hPrinter;
+                if (!OpenPrinter(printerName, out hPrinter, IntPtr.Zero)) {
+                  throw new Exception("OpenPrinter failed for: " + printerName + " (error " + 
+Marshal.GetLastWin32Error() + ")");
+                }
+                try {
+                  DOCINFOW di = new DOCINFOW();
+                  di.pDocName = "CloudPOS RAW Document";
+                  di.pDataType = "RAW";
+                  di.pOutputFile = null;
+                  if (!StartDocPrinter(hPrinter, 1, ref di)) {
+                    throw new Exception("StartDocPrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                  }
+                  try {
+                    if (!StartPagePrinter(hPrinter)) {
+                      throw new Exception("StartPagePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                    }
+                    IntPtr pBytes = Marshal.AllocHGlobal(data.Length);
+                    try {
+                      Marshal.Copy(data, 0, pBytes, data.Length);
+                      int written;
+                      if (!WritePrinter(hPrinter, pBytes, data.Length, out written)) {
+                        throw new Exception("WritePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                      }
+                    } finally {
+                      Marshal.FreeHGlobal(pBytes);
+                    }
+                    EndPagePrinter(hPrinter);
+                  } finally {
+                    EndDocPrinter(hPrinter);
+                  }
+                } finally {
+                  ClosePrinter(hPrinter);
+                }
+                return true;
+              }
+            }
+'@
+            $rawData = 
+[System.IO.File]::ReadAllBytes('C:\\Users\\DG\\AppData\\Local\\Temp\\cloudpos_print_1773431376591.bin')
+            Write-Host "Sending $($rawData.Length) bytes to printer '$printerName' via Windows Print Spooler"
+            [RawPrinterHelper]::SendBytesToPrinter($printerName, $rawData)
+            Write-Host "SUCCESS"
+          } catch {
+            Write-Error $_.Exception.Message
+            exit 1
+          }
+         : Exception calling "SendBytesToPrinter" with "2" argument(s): "OpenPrinter failed for: Star TSP100 CUTTER 
+(TSP143) (error 1801)"
+At line:83 char:13
++             Write-Error $_.Exception.Message
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException
+[2026-03-13T19:49:45.717Z] [ERROR] [PRINT       ] [WindowsPrint] stdout: Sending 840 bytes to printer 'Star TSP100 CUTTER (TSP143)' via Windows Print Spooler
+[2026-03-13T19:49:45.719Z] [ERROR] [PRINT       ] [Job] Job ebb54131-f629-4829-9d69-b4cc18f5ced8 Windows printer failed: Windows printer "Star TSP100 CUTTER (TSP143)" failed: $ErrorActionPreference = 'Stop'
+          try {
+            $printerName = 'Star TSP100 CUTTER (TSP143)'
+            Add-Type -TypeDefinition @'
+            using System;
+            using System.Runtime.InteropServices;
+            public class RawPrinterHelper {
+              [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+              public struct DOCINFOW {
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDocName;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pOutputFile;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDataType;
+              }
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool StartDocPrinter(IntPtr hPrinter, int level, ref DOCINFOW pDocInfo);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool StartPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndDocPrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool ClosePrinter(IntPtr hPrinter);
+              public static bool SendBytesToPrinter(string printerName, byte[] data) {
+                IntPtr hPrinter;
+                if (!OpenPrinter(printerName, out hPrinter, IntPtr.Zero)) {
+                  throw new Exception("OpenPrinter failed for: " + printerName + " (error " + 
+Marshal.GetLastWin32Error() + ")");
+                }
+                try {
+                  DOCINFOW di = new DOCINFOW();
+                  di.pDocName = "CloudPOS RAW Document";
+                  di.pDataType = "RAW";
+                  di.pOutputFile = null;
+                  if (!StartDocPrinter(hPrinter, 1, ref di)) {
+                    throw new Exception("StartDocPrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                  }
+                  try {
+                    if (!StartPagePrinter(hPrinter)) {
+                      throw new Exception("StartPagePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                    }
+                    IntPtr pBytes = Marshal.AllocHGlobal(data.Length);
+                    try {
+                      Marshal.Copy(data, 0, pBytes, data.Length);
+                      int written;
+                      if (!WritePrinter(hPrinter, pBytes, data.Length, out written)) {
+                        throw new Exception("WritePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                      }
+                    } finally {
+                      Marshal.FreeHGlobal(pBytes);
+                    }
+                    EndPagePrinter(hPrinter);
+                  } finally {
+                    EndDocPrinter(hPrinter);
+                  }
+                } finally {
+                  ClosePrinter(hPrinter);
+                }
+                return true;
+              }
+            }
+'@
+            $rawData = 
+[System.IO.File]::ReadAllBytes('C:\\Users\\DG\\AppData\\Local\\Temp\\cloudpos_print_1773431376591.bin')
+            Write-Host "Sending $($rawData.Length) bytes to printer '$printerName' via Windows Print Spooler"
+            [RawPrinterHelper]::SendBytesToPrinter($printerName, $rawData)
+            Write-Host "SUCCESS"
+          } catch {
+            Write-Error $_.Exception.Message
+            exit 1
+          }
+         : Exception calling "SendBytesToPrinter" with "2" argument(s): "OpenPrinter failed for: Star TSP100 CUTTER 
+(TSP143) (error 1801)"
+At line:83 char:13
++             Write-Error $_.Exception.Message
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException
+[2026-03-13T19:49:45.723Z] [ERROR] [PRINT       ] [WindowsPrint] PowerShell failed: $ErrorActionPreference = 'Stop'
+          try {
+            $printerName = 'Star TSP100 CUTTER (TSP143)'
+            Add-Type -TypeDefinition @'
+            using System;
+            using System.Runtime.InteropServices;
+            public class RawPrinterHelper {
+              [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+              public struct DOCINFOW {
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDocName;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pOutputFile;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDataType;
+              }
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool StartDocPrinter(IntPtr hPrinter, int level, ref DOCINFOW pDocInfo);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool StartPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndDocPrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool ClosePrinter(IntPtr hPrinter);
+              public static bool SendBytesToPrinter(string printerName, byte[] data) {
+                IntPtr hPrinter;
+                if (!OpenPrinter(printerName, out hPrinter, IntPtr.Zero)) {
+                  throw new Exception("OpenPrinter failed for: " + printerName + " (error " + 
+Marshal.GetLastWin32Error() + ")");
+                }
+                try {
+                  DOCINFOW di = new DOCINFOW();
+                  di.pDocName = "CloudPOS RAW Document";
+                  di.pDataType = "RAW";
+                  di.pOutputFile = null;
+                  if (!StartDocPrinter(hPrinter, 1, ref di)) {
+                    throw new Exception("StartDocPrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                  }
+                  try {
+                    if (!StartPagePrinter(hPrinter)) {
+                      throw new Exception("StartPagePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                    }
+                    IntPtr pBytes = Marshal.AllocHGlobal(data.Length);
+                    try {
+                      Marshal.Copy(data, 0, pBytes, data.Length);
+                      int written;
+                      if (!WritePrinter(hPrinter, pBytes, data.Length, out written)) {
+                        throw new Exception("WritePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                      }
+                    } finally {
+                      Marshal.FreeHGlobal(pBytes);
+                    }
+                    EndPagePrinter(hPrinter);
+                  } finally {
+                    EndDocPrinter(hPrinter);
+                  }
+                } finally {
+                  ClosePrinter(hPrinter);
+                }
+                return true;
+              }
+            }
+'@
+            $rawData = 
+[System.IO.File]::ReadAllBytes('C:\\Users\\DG\\AppData\\Local\\Temp\\cloudpos_print_1773431376553.bin')
+            Write-Host "Sending $($rawData.Length) bytes to printer '$printerName' via Windows Print Spooler"
+            [RawPrinterHelper]::SendBytesToPrinter($printerName, $rawData)
+            Write-Host "SUCCESS"
+          } catch {
+            Write-Error $_.Exception.Message
+            exit 1
+          }
+         : Exception calling "SendBytesToPrinter" with "2" argument(s): "OpenPrinter failed for: Star TSP100 CUTTER 
+(TSP143) (error 1801)"
+At line:83 char:13
++             Write-Error $_.Exception.Message
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException
+[2026-03-13T19:49:45.725Z] [ERROR] [PRINT       ] [WindowsPrint] stdout: Sending 882 bytes to printer 'Star TSP100 CUTTER (TSP143)' via Windows Print Spooler
+[2026-03-13T19:49:45.727Z] [ERROR] [PRINT       ] [Job] Job 516de7eb-900f-42d9-8a5c-e3515ed9a7a9 Windows printer failed: Windows printer "Star TSP100 CUTTER (TSP143)" failed: $ErrorActionPreference = 'Stop'
+          try {
+            $printerName = 'Star TSP100 CUTTER (TSP143)'
+            Add-Type -TypeDefinition @'
+            using System;
+            using System.Runtime.InteropServices;
+            public class RawPrinterHelper {
+              [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+              public struct DOCINFOW {
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDocName;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pOutputFile;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDataType;
+              }
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool StartDocPrinter(IntPtr hPrinter, int level, ref DOCINFOW pDocInfo);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool StartPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndDocPrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool ClosePrinter(IntPtr hPrinter);
+              public static bool SendBytesToPrinter(string printerName, byte[] data) {
+                IntPtr hPrinter;
+                if (!OpenPrinter(printerName, out hPrinter, IntPtr.Zero)) {
+                  throw new Exception("OpenPrinter failed for: " + printerName + " (error " + 
+Marshal.GetLastWin32Error() + ")");
+                }
+                try {
+                  DOCINFOW di = new DOCINFOW();
+                  di.pDocName = "CloudPOS RAW Document";
+                  di.pDataType = "RAW";
+                  di.pOutputFile = null;
+                  if (!StartDocPrinter(hPrinter, 1, ref di)) {
+                    throw new Exception("StartDocPrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                  }
+                  try {
+                    if (!StartPagePrinter(hPrinter)) {
+                      throw new Exception("StartPagePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                    }
+                    IntPtr pBytes = Marshal.AllocHGlobal(data.Length);
+                    try {
+                      Marshal.Copy(data, 0, pBytes, data.Length);
+                      int written;
+                      if (!WritePrinter(hPrinter, pBytes, data.Length, out written)) {
+                        throw new Exception("WritePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                      }
+                    } finally {
+                      Marshal.FreeHGlobal(pBytes);
+                    }
+                    EndPagePrinter(hPrinter);
+                  } finally {
+                    EndDocPrinter(hPrinter);
+                  }
+                } finally {
+                  ClosePrinter(hPrinter);
+                }
+                return true;
+              }
+            }
+'@
+            $rawData = 
+[System.IO.File]::ReadAllBytes('C:\\Users\\DG\\AppData\\Local\\Temp\\cloudpos_print_1773431376553.bin')
+            Write-Host "Sending $($rawData.Length) bytes to printer '$printerName' via Windows Print Spooler"
+            [RawPrinterHelper]::SendBytesToPrinter($printerName, $rawData)
+            Write-Host "SUCCESS"
+          } catch {
+            Write-Error $_.Exception.Message
+            exit 1
+          }
+         : Exception calling "SendBytesToPrinter" with "2" argument(s): "OpenPrinter failed for: Star TSP100 CUTTER 
+(TSP143) (error 1801)"
+At line:83 char:13
++             Write-Error $_.Exception.Message
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException
+[2026-03-13T19:49:45.752Z] [INFO ] [APP         ] [ServiceHost] Service host is ready on port 3001 (CAPS mode)
+[2026-03-13T19:49:45.756Z] [WARN ] [UPDATER     ] [Init] No GitHub token found - auto-update will only work with public repos
+[2026-03-13T19:49:45.758Z] [INFO ] [UPDATER     ] [Init] Auto-updater initialized (v3.1.51)
+[2026-03-13T19:49:45.760Z] [INFO ] [UPDATER     ] [Init] Auto-download: true, Auto-install on quit: true
+[2026-03-13T19:49:45.762Z] [INFO ] [APP         ] [App] All services initialized successfully
+[2026-03-13T19:49:45.844Z] [INFO ] [APP         ] [Interceptor] HTTPS protocol interceptor registered for offline support
+[2026-03-13T19:49:46.061Z] [INFO ] [APP         ] [Window] Launching POS mode | DATA: {"kiosk":false,"maximized":true}
+[2026-03-13T19:49:46.065Z] [INFO ] [APP         ] [Window] Loading URL: https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev/
+[2026-03-13T19:49:46.524Z] [INFO ] [APP         ] [Window] Loading screen shown, navigating to server...
+[2026-03-13T19:49:54.870Z] [INFO ] [APP         ] [Window] Page loaded successfully: https://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev/
+[2026-03-13T19:50:00.778Z] [INFO ] [UPDATER     ] [Check] Initiating update check...
+[2026-03-13T19:50:00.787Z] [INFO ] [UPDATER     ] [Core] Checking for update
+[2026-03-13T19:50:00.794Z] [INFO ] [UPDATER     ] [Check] Checking for updates...
+[2026-03-13T19:50:02.130Z] [INFO ] [UPDATER     ] [Core] Update for version 3.1.51 is not available (latest version: 3.1.51, downgrade is disallowed).
+[2026-03-13T19:50:02.133Z] [INFO ] [UPDATER     ] [Check] App is up to date (v3.1.51)
+[2026-03-13T19:50:36.096Z] [INFO ] [APP         ] [Status] Mode: GREEN | Cloud: connected | Device: SNS-001-WS01 | Uptime: 1m | Pending sync: 0
+[2026-03-13T19:50:45.633Z] [INFO ] [APP         ] [ServiceHost] [CAPS] No devices tracked | CAPS uptime: 1min
+[2026-03-13T19:51:31.340Z] [INFO ] [APP         ] [Interceptor] Offline login auth attempt, 7 employees in cache
+[2026-03-13T19:51:31.347Z] [INFO ] [APP         ] [Interceptor] Offline login auth SUCCESS: Derek Griffin
+[2026-03-13T19:51:31.354Z] [INFO ] [APP         ] [Interceptor] LOCAL-FIRST: POST /api/auth/login -> 200 [mode=green]
+[2026-03-13T19:51:31.421Z] [INFO ] [APP         ] [R:RENDERER:Connecting to wss://7c25787c-567] 
+[2026-03-13T19:51:31.430Z] [INFO ] [APP         ] [Interceptor] LOCAL-FIRST: POST /api/system-status/workstation/heartbeat -> 200 [mode=green]
+[2026-03-13T19:51:31.632Z] [INFO ] [APP         ] [R:RENDERER:Connecting to wss://7c25787c-567] 
+[2026-03-13T19:51:31.637Z] [INFO ] [APP         ] [Interceptor] LOCAL-FIRST: POST /api/system-status/workstation/heartbeat -> 200 [mode=green]
+[2026-03-13T19:51:31.712Z] [ERROR] [APP         ] [R:RENDERER:WebSocket error, closing connect] 
+[2026-03-13T19:51:31.714Z] [INFO ] [APP         ] [R:RENDERER:Stale socket closed (connId=1, a] 
+[2026-03-13T19:51:32.130Z] [INFO ] [APP         ] [R:RENDERER:WebSocket connected (first conne] 
+[2026-03-13T19:51:33.152Z] [DEBUG] [APP         ] [R:POS:CreateCheck] Creating check with workstationId: 32fb06f3-837f-42ed-a6f5-90436ca62e06
+[2026-03-13T19:51:33.334Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Request: POST /api/caps/sync/check-state from 32fb06f3-837f-42ed-a6f5-90436ca62e06 (wsId=32fb06f3-837f-42ed-a6f5-90436ca62e06)
+[2026-03-13T19:51:33.344Z] [INFO ] [APP         ] [ServiceHost] [CAPS Sync] Check 40e5bc31-d18d-4ffb-aa51-9067cc038fbf synced with 0 items, 0 payments
+[2026-03-13T19:51:33.347Z] [INFO ] [APP         ] [Interceptor] GREEN->CAPS warm sync: check 40e5bc31-d18d-4ffb-aa51-9067cc038fbf (0 items) -> 200
+[2026-03-13T19:51:33.392Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Request: POST /api/caps/sync/check-state from 32fb06f3-837f-42ed-a6f5-90436ca62e06 (wsId=32fb06f3-837f-42ed-a6f5-90436ca62e06)
+[2026-03-13T19:51:33.401Z] [INFO ] [APP         ] [ServiceHost] [CAPS Sync] Check 40e5bc31-d18d-4ffb-aa51-9067cc038fbf synced with 1 items, 0 payments
+[2026-03-13T19:51:33.406Z] [INFO ] [APP         ] [Interceptor] GREEN->CAPS warm sync: check 40e5bc31-d18d-4ffb-aa51-9067cc038fbf (1 items) -> 200
+[2026-03-13T19:51:33.519Z] [INFO ] [APP         ] [Interceptor] LOCAL-FIRST: POST /api/item-availability/decrement -> 200 [mode=green]
+[2026-03-13T19:51:35.886Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:51:35.885Z] [DEBUG] [ServiceHost:TransactionSync][0m Processing 2 sync items
+[2026-03-13T19:51:36.102Z] [INFO ] [APP         ] [Status] Mode: GREEN | Cloud: connected | Device: SNS-001-WS01 | Uptime: 2m | Pending sync: 0 | Interceptor (last 60s): 4 requests handled
+[2026-03-13T19:51:36.129Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:51:36.129Z] [DEBUG] [ServiceHost:TransactionSync][0m Check synced: 40e5bc31-d18d-4ffb-aa51-9067cc038fbf
+[2026-03-13T19:51:36.321Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:51:36.320Z] [DEBUG] [ServiceHost:TransactionSync][0m Check already synced (skipped by cloud): 40e5bc31-d18d-4ffb-aa51-9067cc038fbf
+[2026-03-13T19:51:39.065Z] [INFO ] [PRINT       ] [Job] Received job 39f991d8-f714-4ae4-8fc3-fa16ed0783e4 | DATA: {"printer":"Star TSP100 CUTTER (TSP143)","connectionType":"windows_printer"}
+[2026-03-13T19:51:39.068Z] [INFO ] [PRINT       ] [Job] BEL (Star drawer kick) DETECTED in job 39f991d8-f714-4ae4-8fc3-fa16ed0783e4 at offset 839 | DATA: {"printer":"Star TSP100 CUTTER (TSP143)"}
+[2026-03-13T19:51:39.071Z] [INFO ] [PRINT       ] [Job] ESC p (drawer kick) DETECTED in job 39f991d8-f714-4ae4-8fc3-fa16ed0783e4 at offset 840: pin=pin2 | DATA: {"printer":"Star TSP100 CUTTER (TSP143)"}
+[2026-03-13T19:51:39.073Z] [INFO ] [PRINT       ] [Job] Drawer kick scan for job 39f991d8-f714-4ae4-8fc3-fa16ed0783e4: 1 ESC_p + 1 BEL kicks in 851 bytes
+[2026-03-13T19:51:39.075Z] [INFO ] [PRINT       ] [Job] Job 39f991d8-f714-4ae4-8fc3-fa16ed0783e4 sending 851 bytes to Windows printer | DATA: {"printer":"Star TSP100 CUTTER (TSP143)"}
+[2026-03-13T19:51:39.079Z] [INFO ] [PRINT       ] [WindowsPrint] Wrote 851 bytes to temp file C:\Users\DG\AppData\Local\Temp\cloudpos_print_1773431499078.bin
+[2026-03-13T19:51:39.109Z] [INFO ] [PRINT       ] [DrawerKick] Received drawer kick autokick_1773431498973_agufon | DATA: {"printer":"Star TSP100 CUTTER (TSP143)","pin":"pin2","connectionType":"windows_printer"}
+[2026-03-13T19:51:39.111Z] [INFO ] [PRINT       ] [DrawerKick] Building drawer kick command: pin=pin2 (byte=0x00), pulseOn=50, pulseOff=50, duration=100ms
+[2026-03-13T19:51:39.113Z] [INFO ] [PRINT       ] [DrawerKick] Kick command autokick_1773431498973_agufon: 8 bytes = [0x1b 0x40 0x07 0x1b 0x70 0x00 0x32 0x32]
+[2026-03-13T19:51:39.115Z] [INFO ] [PRINT       ] [DrawerKick] Sending 8-byte kick to Windows printer "Star TSP100 CUTTER (TSP143)" via Print Spooler RAW...
+[2026-03-13T19:51:39.118Z] [INFO ] [PRINT       ] [WindowsPrint] Wrote 8 bytes to temp file C:\Users\DG\AppData\Local\Temp\cloudpos_print_1773431499117.bin
+[2026-03-13T19:51:39.189Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Request: POST /api/caps/sync/check-state from 32fb06f3-837f-42ed-a6f5-90436ca62e06 (wsId=32fb06f3-837f-42ed-a6f5-90436ca62e06)
+[2026-03-13T19:51:39.194Z] [INFO ] [APP         ] [ServiceHost] [CAPS Sync] Check 40e5bc31-d18d-4ffb-aa51-9067cc038fbf synced with 1 items, 1 payments
+[2026-03-13T19:51:39.204Z] [INFO ] [APP         ] [Interceptor] GREEN->CAPS warm sync: check 40e5bc31-d18d-4ffb-aa51-9067cc038fbf (1 items) -> 200
+[2026-03-13T19:51:39.294Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Request: POST /api/caps/sync/check-state from 32fb06f3-837f-42ed-a6f5-90436ca62e06 (wsId=32fb06f3-837f-42ed-a6f5-90436ca62e06)
+[2026-03-13T19:51:39.298Z] [INFO ] [APP         ] [ServiceHost] [CAPS Sync] Check 40e5bc31-d18d-4ffb-aa51-9067cc038fbf synced with 1 items, 1 payments
+[2026-03-13T19:51:39.301Z] [INFO ] [APP         ] [Interceptor] GREEN->CAPS warm sync: check 40e5bc31-d18d-4ffb-aa51-9067cc038fbf (1 items) -> 200
+[2026-03-13T19:51:39.348Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Request: POST /api/caps/sync/check-state from 32fb06f3-837f-42ed-a6f5-90436ca62e06 (wsId=32fb06f3-837f-42ed-a6f5-90436ca62e06)
+[2026-03-13T19:51:39.351Z] [INFO ] [APP         ] [ServiceHost] [CAPS Sync] Check 40e5bc31-d18d-4ffb-aa51-9067cc038fbf synced with 1 items, 1 payments
+[2026-03-13T19:51:39.355Z] [INFO ] [APP         ] [Interceptor] GREEN->CAPS warm sync: check 40e5bc31-d18d-4ffb-aa51-9067cc038fbf (1 items) -> 200
+[2026-03-13T19:51:40.895Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:51:40.895Z] [DEBUG] [ServiceHost:TransactionSync][0m Processing 3 sync items
+[2026-03-13T19:51:41.086Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:51:41.086Z] [DEBUG] [ServiceHost:TransactionSync][0m Check already synced (skipped by cloud): 40e5bc31-d18d-4ffb-aa51-9067cc038fbf
+[2026-03-13T19:51:41.268Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:51:41.268Z] [DEBUG] [ServiceHost:TransactionSync][0m Check already synced (skipped by cloud): 40e5bc31-d18d-4ffb-aa51-9067cc038fbf
+[2026-03-13T19:51:41.326Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:51:41.326Z] [DEBUG] [ServiceHost:TransactionSync][0m Check already synced (skipped by cloud): 40e5bc31-d18d-4ffb-aa51-9067cc038fbf
+[2026-03-13T19:51:43.150Z] [ERROR] [PRINT       ] [WindowsPrint] PowerShell failed: $ErrorActionPreference = 'Stop'
+          try {
+            $printerName = 'Star TSP100 CUTTER (TSP143)'
+            Add-Type -TypeDefinition @'
+            using System;
+            using System.Runtime.InteropServices;
+            public class RawPrinterHelper {
+              [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+              public struct DOCINFOW {
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDocName;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pOutputFile;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDataType;
+              }
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool StartDocPrinter(IntPtr hPrinter, int level, ref DOCINFOW pDocInfo);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool StartPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndDocPrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool ClosePrinter(IntPtr hPrinter);
+              public static bool SendBytesToPrinter(string printerName, byte[] data) {
+                IntPtr hPrinter;
+                if (!OpenPrinter(printerName, out hPrinter, IntPtr.Zero)) {
+                  throw new Exception("OpenPrinter failed for: " + printerName + " (error " + 
+Marshal.GetLastWin32Error() + ")");
+                }
+                try {
+                  DOCINFOW di = new DOCINFOW();
+                  di.pDocName = "CloudPOS RAW Document";
+                  di.pDataType = "RAW";
+                  di.pOutputFile = null;
+                  if (!StartDocPrinter(hPrinter, 1, ref di)) {
+                    throw new Exception("StartDocPrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                  }
+                  try {
+                    if (!StartPagePrinter(hPrinter)) {
+                      throw new Exception("StartPagePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                    }
+                    IntPtr pBytes = Marshal.AllocHGlobal(data.Length);
+                    try {
+                      Marshal.Copy(data, 0, pBytes, data.Length);
+                      int written;
+                      if (!WritePrinter(hPrinter, pBytes, data.Length, out written)) {
+                        throw new Exception("WritePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                      }
+                    } finally {
+                      Marshal.FreeHGlobal(pBytes);
+                    }
+                    EndPagePrinter(hPrinter);
+                  } finally {
+                    EndDocPrinter(hPrinter);
+                  }
+                } finally {
+                  ClosePrinter(hPrinter);
+                }
+                return true;
+              }
+            }
+'@
+            $rawData = 
+[System.IO.File]::ReadAllBytes('C:\\Users\\DG\\AppData\\Local\\Temp\\cloudpos_print_1773431499117.bin')
+            Write-Host "Sending $($rawData.Length) bytes to printer '$printerName' via Windows Print Spooler"
+            [RawPrinterHelper]::SendBytesToPrinter($printerName, $rawData)
+            Write-Host "SUCCESS"
+          } catch {
+            Write-Error $_.Exception.Message
+            exit 1
+          }
+         : Exception calling "SendBytesToPrinter" with "2" argument(s): "OpenPrinter failed for: Star TSP100 CUTTER 
+(TSP143) (error 1801)"
+At line:83 char:13
++             Write-Error $_.Exception.Message
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException
+[2026-03-13T19:51:43.152Z] [ERROR] [PRINT       ] [WindowsPrint] stdout: Sending 8 bytes to printer 'Star TSP100 CUTTER (TSP143)' via Windows Print Spooler
+[2026-03-13T19:51:43.154Z] [ERROR] [PRINT       ] [DrawerKick] Drawer kick autokick_1773431498973_agufon Windows printer FAILED: Windows printer "Star TSP100 CUTTER (TSP143)" failed: $ErrorActionPreference = 'Stop'
+          try {
+            $printerName = 'Star TSP100 CUTTER (TSP143)'
+            Add-Type -TypeDefinition @'
+            using System;
+            using System.Runtime.InteropServices;
+            public class RawPrinterHelper {
+              [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+              public struct DOCINFOW {
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDocName;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pOutputFile;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDataType;
+              }
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool StartDocPrinter(IntPtr hPrinter, int level, ref DOCINFOW pDocInfo);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool StartPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndDocPrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool ClosePrinter(IntPtr hPrinter);
+              public static bool SendBytesToPrinter(string printerName, byte[] data) {
+                IntPtr hPrinter;
+                if (!OpenPrinter(printerName, out hPrinter, IntPtr.Zero)) {
+                  throw new Exception("OpenPrinter failed for: " + printerName + " (error " + 
+Marshal.GetLastWin32Error() + ")");
+                }
+                try {
+                  DOCINFOW di = new DOCINFOW();
+                  di.pDocName = "CloudPOS RAW Document";
+                  di.pDataType = "RAW";
+                  di.pOutputFile = null;
+                  if (!StartDocPrinter(hPrinter, 1, ref di)) {
+                    throw new Exception("StartDocPrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                  }
+                  try {
+                    if (!StartPagePrinter(hPrinter)) {
+                      throw new Exception("StartPagePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                    }
+                    IntPtr pBytes = Marshal.AllocHGlobal(data.Length);
+                    try {
+                      Marshal.Copy(data, 0, pBytes, data.Length);
+                      int written;
+                      if (!WritePrinter(hPrinter, pBytes, data.Length, out written)) {
+                        throw new Exception("WritePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                      }
+                    } finally {
+                      Marshal.FreeHGlobal(pBytes);
+                    }
+                    EndPagePrinter(hPrinter);
+                  } finally {
+                    EndDocPrinter(hPrinter);
+                  }
+                } finally {
+                  ClosePrinter(hPrinter);
+                }
+                return true;
+              }
+            }
+'@
+            $rawData = 
+[System.IO.File]::ReadAllBytes('C:\\Users\\DG\\AppData\\Local\\Temp\\cloudpos_print_1773431499117.bin')
+            Write-Host "Sending $($rawData.Length) bytes to printer '$printerName' via Windows Print Spooler"
+            [RawPrinterHelper]::SendBytesToPrinter($printerName, $rawData)
+            Write-Host "SUCCESS"
+          } catch {
+            Write-Error $_.Exception.Message
+            exit 1
+          }
+         : Exception calling "SendBytesToPrinter" with "2" argument(s): "OpenPrinter failed for: Star TSP100 CUTTER 
+(TSP143) (error 1801)"
+At line:83 char:13
++             Write-Error $_.Exception.Message
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException
+[2026-03-13T19:51:43.158Z] [ERROR] [PRINT       ] [WindowsPrint] PowerShell failed: $ErrorActionPreference = 'Stop'
+          try {
+            $printerName = 'Star TSP100 CUTTER (TSP143)'
+            Add-Type -TypeDefinition @'
+            using System;
+            using System.Runtime.InteropServices;
+            public class RawPrinterHelper {
+              [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+              public struct DOCINFOW {
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDocName;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pOutputFile;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDataType;
+              }
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool StartDocPrinter(IntPtr hPrinter, int level, ref DOCINFOW pDocInfo);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool StartPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndDocPrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool ClosePrinter(IntPtr hPrinter);
+              public static bool SendBytesToPrinter(string printerName, byte[] data) {
+                IntPtr hPrinter;
+                if (!OpenPrinter(printerName, out hPrinter, IntPtr.Zero)) {
+                  throw new Exception("OpenPrinter failed for: " + printerName + " (error " + 
+Marshal.GetLastWin32Error() + ")");
+                }
+                try {
+                  DOCINFOW di = new DOCINFOW();
+                  di.pDocName = "CloudPOS RAW Document";
+                  di.pDataType = "RAW";
+                  di.pOutputFile = null;
+                  if (!StartDocPrinter(hPrinter, 1, ref di)) {
+                    throw new Exception("StartDocPrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                  }
+                  try {
+                    if (!StartPagePrinter(hPrinter)) {
+                      throw new Exception("StartPagePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                    }
+                    IntPtr pBytes = Marshal.AllocHGlobal(data.Length);
+                    try {
+                      Marshal.Copy(data, 0, pBytes, data.Length);
+                      int written;
+                      if (!WritePrinter(hPrinter, pBytes, data.Length, out written)) {
+                        throw new Exception("WritePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                      }
+                    } finally {
+                      Marshal.FreeHGlobal(pBytes);
+                    }
+                    EndPagePrinter(hPrinter);
+                  } finally {
+                    EndDocPrinter(hPrinter);
+                  }
+                } finally {
+                  ClosePrinter(hPrinter);
+                }
+                return true;
+              }
+            }
+'@
+            $rawData = 
+[System.IO.File]::ReadAllBytes('C:\\Users\\DG\\AppData\\Local\\Temp\\cloudpos_print_1773431499078.bin')
+            Write-Host "Sending $($rawData.Length) bytes to printer '$printerName' via Windows Print Spooler"
+            [RawPrinterHelper]::SendBytesToPrinter($printerName, $rawData)
+            Write-Host "SUCCESS"
+          } catch {
+            Write-Error $_.Exception.Message
+            exit 1
+          }
+         : Exception calling "SendBytesToPrinter" with "2" argument(s): "OpenPrinter failed for: Star TSP100 CUTTER 
+(TSP143) (error 1801)"
+At line:83 char:13
++             Write-Error $_.Exception.Message
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException
+[2026-03-13T19:51:43.160Z] [ERROR] [PRINT       ] [WindowsPrint] stdout: Sending 851 bytes to printer 'Star TSP100 CUTTER (TSP143)' via Windows Print Spooler
+[2026-03-13T19:51:43.163Z] [ERROR] [PRINT       ] [Job] Job 39f991d8-f714-4ae4-8fc3-fa16ed0783e4 Windows printer failed: Windows printer "Star TSP100 CUTTER (TSP143)" failed: $ErrorActionPreference = 'Stop'
+          try {
+            $printerName = 'Star TSP100 CUTTER (TSP143)'
+            Add-Type -TypeDefinition @'
+            using System;
+            using System.Runtime.InteropServices;
+            public class RawPrinterHelper {
+              [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+              public struct DOCINFOW {
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDocName;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pOutputFile;
+                [MarshalAs(UnmanagedType.LPWStr)] public string pDataType;
+              }
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+              [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+              public static extern bool StartDocPrinter(IntPtr hPrinter, int level, ref DOCINFOW pDocInfo);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool StartPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndPagePrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool EndDocPrinter(IntPtr hPrinter);
+              [DllImport("winspool.drv", SetLastError = true)]
+              public static extern bool ClosePrinter(IntPtr hPrinter);
+              public static bool SendBytesToPrinter(string printerName, byte[] data) {
+                IntPtr hPrinter;
+                if (!OpenPrinter(printerName, out hPrinter, IntPtr.Zero)) {
+                  throw new Exception("OpenPrinter failed for: " + printerName + " (error " + 
+Marshal.GetLastWin32Error() + ")");
+                }
+                try {
+                  DOCINFOW di = new DOCINFOW();
+                  di.pDocName = "CloudPOS RAW Document";
+                  di.pDataType = "RAW";
+                  di.pOutputFile = null;
+                  if (!StartDocPrinter(hPrinter, 1, ref di)) {
+                    throw new Exception("StartDocPrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                  }
+                  try {
+                    if (!StartPagePrinter(hPrinter)) {
+                      throw new Exception("StartPagePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                    }
+                    IntPtr pBytes = Marshal.AllocHGlobal(data.Length);
+                    try {
+                      Marshal.Copy(data, 0, pBytes, data.Length);
+                      int written;
+                      if (!WritePrinter(hPrinter, pBytes, data.Length, out written)) {
+                        throw new Exception("WritePrinter failed (error " + Marshal.GetLastWin32Error() + ")");
+                      }
+                    } finally {
+                      Marshal.FreeHGlobal(pBytes);
+                    }
+                    EndPagePrinter(hPrinter);
+                  } finally {
+                    EndDocPrinter(hPrinter);
+                  }
+                } finally {
+                  ClosePrinter(hPrinter);
+                }
+                return true;
+              }
+            }
+'@
+            $rawData = 
+[System.IO.File]::ReadAllBytes('C:\\Users\\DG\\AppData\\Local\\Temp\\cloudpos_print_1773431499078.bin')
+            Write-Host "Sending $($rawData.Length) bytes to printer '$printerName' via Windows Print Spooler"
+            [RawPrinterHelper]::SendBytesToPrinter($printerName, $rawData)
+            Write-Host "SUCCESS"
+          } catch {
+            Write-Error $_.Exception.Message
+            exit 1
+          }
+         : Exception calling "SendBytesToPrinter" with "2" argument(s): "OpenPrinter failed for: Star TSP100 CUTTER 
+(TSP143) (error 1801)"
+At line:83 char:13
++             Write-Error $_.Exception.Message
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException
+[2026-03-13T19:51:45.644Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Connected devices: 32fb06f3-837f-42ed-a6f5-90436ca62e06(active) | CAPS uptime: 2min
+[2026-03-13T19:51:46.909Z] [INFO ] [APP         ] [Interceptor] LOCAL-FIRST: POST /api/system-status/workstation/heartbeat -> 200 [mode=green]
+[2026-03-13T19:51:47.024Z] [INFO ] [APP         ] [R:RENDERER:Stale socket closed (connId=2, a] 
+[2026-03-13T19:52:09.073Z] [INFO ] [APP         ] [Network] Cloud unreachable (1/2 failures) — waiting before switching mode
+[2026-03-13T19:52:21.081Z] [INFO ] [APP         ] [Interceptor] Offline mode ENABLED
+[2026-03-13T19:52:21.086Z] [WARN ] [APP         ] [Network] Cloud connection lost — checking CAPS fallback | Error: fetch failed
+[2026-03-13T19:52:21.109Z] [INFO ] [APP         ] [Interceptor] Connection mode changed to: YELLOW
+[2026-03-13T19:52:21.115Z] [INFO ] [APP         ] [Network] Mode changed: GREEN -> YELLOW | Cloud: unreachable | CAPS: http://127.0.0.1:3001 (reachable)
+[2026-03-13T19:52:21.122Z] [INFO ] [APP         ] [Interceptor] Service host URL set: http://127.0.0.1:3001
+[2026-03-13T19:52:21.128Z] [INFO ] [APP         ] [Connectivity] Mode changed green -> yellow, adjusting interval
+[2026-03-13T19:52:21.135Z] [INFO ] [APP         ] [Connectivity] Check interval set to 8s (mode: yellow)
+[2026-03-13T19:52:25.686Z] [INFO ] [PRINT       ] [Connect] Disconnected (code: 1006)
+[2026-03-13T19:52:25.688Z] [INFO ] [PRINT       ] [Status] connected=false, auth=false
+[2026-03-13T19:52:25.690Z] [INFO ] [PRINT       ] [Connect] Reconnecting in 1s (attempt 1)
+[2026-03-13T19:52:26.698Z] [INFO ] [PRINT       ] [Connect] Connecting to wss://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev/ws/print-agents
+[2026-03-13T19:52:26.729Z] [ERROR] [PRINT       ] [Connect] WebSocket error: getaddrinfo ENOTFOUND 7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev
+[2026-03-13T19:52:26.734Z] [INFO ] [PRINT       ] [Connect] Disconnected (code: 1006)
+[2026-03-13T19:52:26.738Z] [INFO ] [PRINT       ] [Status] connected=false, auth=false
+[2026-03-13T19:52:26.742Z] [INFO ] [PRINT       ] [Connect] Reconnecting in 2s (attempt 2)
+[2026-03-13T19:52:28.753Z] [INFO ] [PRINT       ] [Connect] Connecting to wss://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev/ws/print-agents
+[2026-03-13T19:52:28.762Z] [ERROR] [PRINT       ] [Connect] WebSocket error: getaddrinfo ENOTFOUND 7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev
+[2026-03-13T19:52:28.767Z] [INFO ] [PRINT       ] [Connect] Disconnected (code: 1006)
+[2026-03-13T19:52:28.773Z] [INFO ] [PRINT       ] [Status] connected=false, auth=false
+[2026-03-13T19:52:28.778Z] [INFO ] [PRINT       ] [Connect] Reconnecting in 4s (attempt 3)
+[2026-03-13T19:52:28.881Z] [INFO ] [APP         ] [Interceptor] Offline login auth attempt, 7 employees in cache
+[2026-03-13T19:52:28.882Z] [INFO ] [APP         ] [Interceptor] Offline login auth SUCCESS: Derek Griffin
+[2026-03-13T19:52:28.884Z] [INFO ] [APP         ] [Interceptor] LOCAL-FIRST: POST /api/auth/login -> 200 [mode=yellow]
+[2026-03-13T19:52:28.918Z] [INFO ] [APP         ] [R:RENDERER:Connecting to wss://7c25787c-567] 
+[2026-03-13T19:52:28.922Z] [INFO ] [APP         ] [Interceptor] LOCAL-FIRST: POST /api/system-status/workstation/heartbeat -> 200 [mode=yellow]
+[2026-03-13T19:52:28.930Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/item-availability
+[2026-03-13T19:52:28.939Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/health
+[2026-03-13T19:52:28.943Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/item-availability -> 200
+[2026-03-13T19:52:28.954Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/health -> 404
+[2026-03-13T19:52:28.956Z] [WARN ] [APP         ] [Interceptor] YELLOW->RED fallback: CAPS returned 404 for GET /api/health
+[2026-03-13T19:52:28.958Z] [INFO ] [APP         ] [Interceptor] RED mode -> local: GET /api/health
+[2026-03-13T19:52:28.963Z] [INFO ] [APP         ] [Interceptor] OFFLINE -> GET /api/health -> 200
+[2026-03-13T19:52:28.968Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/auth/offline-employees
+[2026-03-13T19:52:28.974Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/auth/offline-employees -> 200
+[2026-03-13T19:52:28.996Z] [INFO ] [APP         ] [R:RENDERER:Connecting to wss://7c25787c-567] 
+[2026-03-13T19:52:29.001Z] [INFO ] [APP         ] [Interceptor] LOCAL-FIRST: POST /api/system-status/workstation/heartbeat -> 200 [mode=yellow]
+[2026-03-13T19:52:29.036Z] [ERROR] [APP         ] [R:RENDERER:WebSocket error, closing connect] 
+[2026-03-13T19:52:29.039Z] [INFO ] [APP         ] [R:RENDERER:Stale socket closed (connId=3, a] 
+[2026-03-13T19:52:29.167Z] [INFO ] [APP         ] [Interceptor] Service host URL set: http://127.0.0.1:3001
+[2026-03-13T19:52:31.968Z] [ERROR] [APP         ] [R:RENDERER:WebSocket error, closing connect] 
+[2026-03-13T19:52:31.971Z] [WARN ] [APP         ] [R:RENDERER:WebSocket disconnected, will rec] 
+[2026-03-13T19:52:32.022Z] [DEBUG] [APP         ] [R:POS:CreateCheck] Creating check with workstationId: 32fb06f3-837f-42ed-a6f5-90436ca62e06
+[2026-03-13T19:52:32.026Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks
+[2026-03-13T19:52:32.033Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Request: POST /api/checks from 32fb06f3-837f-42ed-a6f5-90436ca62e06 (wsId=32fb06f3-837f-42ed-a6f5-90436ca62e06)
+[2026-03-13T19:52:32.044Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:52:32.043Z] [DEBUG] [ServiceHost:TransactionSync][0m Queued check for sync: 975b6da8-25a2-4f91-929d-5a97b20de220 {"action":"create"}
+[2026-03-13T19:52:32.049Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks -> 200
+[2026-03-13T19:52:32.088Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/items
+[2026-03-13T19:52:32.093Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Request: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/items from 32fb06f3-837f-42ed-a6f5-90436ca62e06 (wsId=32fb06f3-837f-42ed-a6f5-90436ca62e06)
+[2026-03-13T19:52:32.097Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/items -> 400
+[2026-03-13T19:52:32.121Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/payments
+[2026-03-13T19:52:32.126Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/service-charges
+[2026-03-13T19:52:32.131Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/payments -> 200
+[2026-03-13T19:52:32.137Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/service-charges -> 500
+[2026-03-13T19:52:32.786Z] [INFO ] [PRINT       ] [Connect] Connecting to wss://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev/ws/print-agents
+[2026-03-13T19:52:32.797Z] [ERROR] [PRINT       ] [Connect] WebSocket error: getaddrinfo ENOTFOUND 7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev
+[2026-03-13T19:52:32.802Z] [INFO ] [PRINT       ] [Connect] Disconnected (code: 1006)
+[2026-03-13T19:52:32.808Z] [INFO ] [PRINT       ] [Status] connected=false, auth=false
+[2026-03-13T19:52:32.814Z] [INFO ] [PRINT       ] [Connect] Reconnecting in 8s (attempt 4)
+[2026-03-13T19:52:33.972Z] [INFO ] [APP         ] [R:RENDERER:Connecting to wss://7c25787c-567] 
+[2026-03-13T19:52:34.882Z] [DEBUG] [APP         ] [R:POS:AddItem] Sending item with workstationId: 32fb06f3-837f-42ed-a6f5-90436ca62e06
+[2026-03-13T19:52:34.887Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/items
+[2026-03-13T19:52:34.900Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/items -> 400
+[2026-03-13T19:52:34.904Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Request: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/items from 32fb06f3-837f-42ed-a6f5-90436ca62e06 (wsId=32fb06f3-837f-42ed-a6f5-90436ca62e06)
+[2026-03-13T19:52:34.938Z] [INFO ] [APP         ] [Interceptor] LOCAL-FIRST: POST /api/item-availability/decrement -> 200 [mode=yellow]
+[2026-03-13T19:52:34.985Z] [ERROR] [APP         ] [R:POS:AddItem] Failed to add item Frozen Banana: 400: {"error":"NOT NULL constraint failed: check_items.total_price"}
+[2026-03-13T19:52:34.990Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/item-availability
+[2026-03-13T19:52:34.995Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/item-availability/increment
+[2026-03-13T19:52:35.002Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/payments
+[2026-03-13T19:52:35.010Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/service-charges
+[2026-03-13T19:52:35.016Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/item-availability
+[2026-03-13T19:52:35.021Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/item-availability -> 200
+[2026-03-13T19:52:35.026Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/item-availability/increment -> 404
+[2026-03-13T19:52:35.029Z] [WARN ] [APP         ] [Interceptor] YELLOW->RED fallback: CAPS returned 404 for POST /api/item-availability/increment
+[2026-03-13T19:52:35.032Z] [INFO ] [APP         ] [Interceptor] RED mode -> local: POST /api/item-availability/increment
+[2026-03-13T19:52:35.038Z] [INFO ] [APP         ] [Interceptor] OFFLINE -> POST /api/item-availability/increment -> 202
+[2026-03-13T19:52:35.047Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/payments -> 200
+[2026-03-13T19:52:35.053Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/service-charges -> 500
+[2026-03-13T19:52:35.060Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/item-availability -> 200
+[2026-03-13T19:52:35.961Z] [INFO ] [APP         ] [ServiceHost] [36m[2026-03-13T19:52:35.962Z] [INFO] [ServiceHost:TransactionSync][0m Syncing 1 journal entries
+[2026-03-13T19:52:35.972Z] [INFO ] [APP         ] [ServiceHost] [33m[2026-03-13T19:52:35.973Z] [WARN] [ServiceHost:TransactionSync][0m Journal sync batch failed (transient), will retry next cycle {"error":"fetch failed"}
+[2026-03-13T19:52:35.979Z] [INFO ] [APP         ] [ServiceHost] [33m[2026-03-13T19:52:35.977Z] [WARN] [ServiceHost:TransactionSync][0m Journal sync failed, will retry next cycle {"error":"fetch failed"}
+[2026-03-13T19:52:35.983Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:52:35.983Z] [DEBUG] [ServiceHost:TransactionSync][0m Processing 1 sync items
+[2026-03-13T19:52:35.996Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:52:35.997Z] [DEBUG] [ServiceHost:Retry][0m Retry attempt 1/3 {"delay":1159,"error":"fetch failed"}
+[2026-03-13T19:52:36.000Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:52:36.000Z] [DEBUG] [ServiceHost:TransactionSync][0m Retrying sync item 204 {"attempt":1,"delay":1159,"error":"fetch failed"}
+[2026-03-13T19:52:36.112Z] [INFO ] [APP         ] [Status] Mode: YELLOW | Cloud: disconnected | Device: SNS-001-WS01 | Uptime: 3m | Pending sync: 1 | Interceptor (last 60s): 7 requests handled
+[2026-03-13T19:52:36.442Z] [INFO ] [OFFLINEDB   ] [Sync] Forwarding 1 non-check operation(s) to CAPS...
+[2026-03-13T19:52:36.450Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Request: POST /api/caps/sync/queue-operation from SNS-001-WS01 (wsId=32fb06f3-837f-42ed-a6f5-90436ca62e06)
+[2026-03-13T19:52:36.455Z] [INFO ] [OFFLINEDB   ] [Sync] CAPS sync results: 0 synced, 1 failed, 1 pending
+[2026-03-13T19:52:36.458Z] [INFO ] [APP         ] [Sync] CAPS sync: 0 synced, 1 failed, 1 pending, 7 permanently failed
+[2026-03-13T19:52:37.061Z] [ERROR] [APP         ] [R:RENDERER:WebSocket error, closing connect] 
+[2026-03-13T19:52:37.067Z] [WARN ] [APP         ] [R:RENDERER:WebSocket disconnected, will rec] 
+[2026-03-13T19:52:37.160Z] [INFO ] [APP         ] [Interceptor] Service host URL set: http://127.0.0.1:3001
+[2026-03-13T19:52:37.178Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:52:37.177Z] [DEBUG] [ServiceHost:Retry][0m Retry attempt 2/3 {"delay":1645,"error":"fetch failed"}
+[2026-03-13T19:52:37.181Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:52:37.179Z] [DEBUG] [ServiceHost:TransactionSync][0m Retrying sync item 204 {"attempt":2,"delay":1645,"error":"fetch failed"}
+[2026-03-13T19:52:38.842Z] [INFO ] [APP         ] [ServiceHost] [31m[2026-03-13T19:52:38.838Z] [ERROR] [ServiceHost:Retry][0m Operation failed after 3 attempts
+  Error: TypeError: fetch failed
+      at node:internal/deps/undici/undici:15845:13
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async CloudConnection.fetch (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:37455:22)
+[2026-03-13T19:52:38.848Z] [INFO ] [APP         ] [ServiceHost] [31m[2026-03-13T19:52:38.842Z] [ERROR] [ServiceHost:TransactionSync][0m Sync failed for check/975b6da8-25a2-4f91-929d-5a97b20de220 {"attempts":0}
+  Error: TypeError: fetch failed
+      at node:internal/deps/undici/undici:15845:13
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async CloudConnection.fetch (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:37455:22)
+[2026-03-13T19:52:39.070Z] [INFO ] [APP         ] [R:RENDERER:Connecting to wss://7c25787c-567] 
+[2026-03-13T19:52:40.822Z] [INFO ] [PRINT       ] [Connect] Connecting to wss://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev/ws/print-agents
+[2026-03-13T19:52:40.833Z] [ERROR] [PRINT       ] [Connect] WebSocket error: getaddrinfo ENOTFOUND 7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev
+[2026-03-13T19:52:40.839Z] [INFO ] [PRINT       ] [Connect] Disconnected (code: 1006)
+[2026-03-13T19:52:40.845Z] [INFO ] [PRINT       ] [Status] connected=false, auth=false
+[2026-03-13T19:52:40.851Z] [INFO ] [PRINT       ] [Connect] Reconnecting in 16s (attempt 5)
+[2026-03-13T19:52:40.972Z] [INFO ] [APP         ] [ServiceHost] [36m[2026-03-13T19:52:40.968Z] [INFO] [ServiceHost:TransactionSync][0m Syncing 1 journal entries
+[2026-03-13T19:52:40.987Z] [INFO ] [APP         ] [ServiceHost] [33m[2026-03-13T19:52:40.985Z] [WARN] [ServiceHost:TransactionSync][0m Journal sync batch failed (transient), will retry next cycle {"error":"fetch failed"}
+[2026-03-13T19:52:40.996Z] [INFO ] [APP         ] [ServiceHost] [33m[2026-03-13T19:52:40.991Z] [WARN] [ServiceHost:TransactionSync][0m Journal sync failed, will retry next cycle {"error":"fetch failed"}
+[2026-03-13T19:52:41.002Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:52:41.000Z] [DEBUG] [ServiceHost:TransactionSync][0m Processing 1 sync items
+[2026-03-13T19:52:41.008Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:52:41.008Z] [DEBUG] [ServiceHost:Retry][0m Retry attempt 1/3 {"delay":1094,"error":"fetch failed"}
+[2026-03-13T19:52:41.014Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:52:41.010Z] [DEBUG] [ServiceHost:TransactionSync][0m Retrying sync item 204 {"attempt":1,"delay":1094,"error":"fetch failed"}
+[2026-03-13T19:52:41.446Z] [DEBUG] [OFFLINEDB   ] [Sync] 1 non-check op(s) waiting for backoff retry
+[2026-03-13T19:52:42.117Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:52:42.116Z] [DEBUG] [ServiceHost:Retry][0m Retry attempt 2/3 {"delay":2287,"error":"fetch failed"}
+[2026-03-13T19:52:42.120Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:52:42.118Z] [DEBUG] [ServiceHost:TransactionSync][0m Retrying sync item 204 {"attempt":2,"delay":2287,"error":"fetch failed"}
+[2026-03-13T19:52:42.164Z] [ERROR] [APP         ] [R:RENDERER:WebSocket error, closing connect] 
+[2026-03-13T19:52:42.167Z] [WARN ] [APP         ] [R:RENDERER:WebSocket disconnected, will rec] 
+[2026-03-13T19:52:44.169Z] [INFO ] [APP         ] [R:RENDERER:Connecting to wss://7c25787c-567] 
+[2026-03-13T19:52:44.419Z] [INFO ] [APP         ] [ServiceHost] [31m[2026-03-13T19:52:44.417Z] [ERROR] [ServiceHost:Retry][0m Operation failed after 3 attempts
+  Error: TypeError: fetch failed
+      at node:internal/deps/undici/undici:15845:13
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async CloudConnection.fetch (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:37455:22)
+[2026-03-13T19:52:44.427Z] [INFO ] [APP         ] [ServiceHost] [31m[2026-03-13T19:52:44.425Z] [ERROR] [ServiceHost:TransactionSync][0m Sync failed for check/975b6da8-25a2-4f91-929d-5a97b20de220 {"attempts":1}
+  Error: TypeError: fetch failed
+      at node:internal/deps/undici/undici:15845:13
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async CloudConnection.fetch (C:\Program Files\Cloud POS\Cloud POS\resources\app.asar\electron\service-host-embedded.cjs:37455:22)
+[2026-03-13T19:52:45.170Z] [INFO ] [APP         ] [Interceptor] Service host URL set: http://127.0.0.1:3001
+[2026-03-13T19:52:45.646Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Connected devices: SNS-001-WS01(active) | CAPS uptime: 3min
+[2026-03-13T19:52:45.976Z] [INFO ] [APP         ] [ServiceHost] [36m[2026-03-13T19:52:45.975Z] [INFO] [ServiceHost:TransactionSync][0m Syncing 1 journal entries
+[2026-03-13T19:52:45.988Z] [INFO ] [APP         ] [ServiceHost] [33m[2026-03-13T19:52:45.984Z] [WARN] [ServiceHost:Retry][0m Circuit cloud-sync OPEN (threshold reached: 5)
+[2026-03-13T19:52:46.001Z] [INFO ] [APP         ] [ServiceHost] [33m[2026-03-13T19:52:45.999Z] [WARN] [ServiceHost:TransactionSync][0m Journal sync batch failed (transient), will retry next cycle {"error":"fetch failed"}
+[2026-03-13T19:52:46.010Z] [INFO ] [APP         ] [ServiceHost] [33m[2026-03-13T19:52:46.008Z] [WARN] [ServiceHost:TransactionSync][0m Journal sync failed, will retry next cycle {"error":"fetch failed"}
+[2026-03-13T19:52:46.510Z] [DEBUG] [OFFLINEDB   ] [Sync] 1 non-check op(s) waiting for backoff retry
+[2026-03-13T19:52:47.225Z] [ERROR] [APP         ] [R:RENDERER:WebSocket error, closing connect] 
+[2026-03-13T19:52:47.231Z] [WARN ] [APP         ] [R:RENDERER:WebSocket disconnected, will rec] 
+[2026-03-13T19:52:48.886Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/items
+[2026-03-13T19:52:48.905Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/items -> 400
+[2026-03-13T19:52:48.908Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Request: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/items from 32fb06f3-837f-42ed-a6f5-90436ca62e06 (wsId=32fb06f3-837f-42ed-a6f5-90436ca62e06)
+[2026-03-13T19:52:49.227Z] [INFO ] [APP         ] [R:RENDERER:Connecting to wss://7c25787c-567] 
+[2026-03-13T19:52:50.984Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:52:50.983Z] [DEBUG] [ServiceHost:TransactionSync][0m Circuit breaker OPEN, skipping sync (retry in 56s)
+[2026-03-13T19:52:51.510Z] [DEBUG] [OFFLINEDB   ] [Sync] 1 non-check op(s) waiting for backoff retry
+[2026-03-13T19:52:51.906Z] [DEBUG] [APP         ] [R:POS:AddItem] Sending item with workstationId: 32fb06f3-837f-42ed-a6f5-90436ca62e06
+[2026-03-13T19:52:51.910Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/items
+[2026-03-13T19:52:51.915Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Request: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/items from 32fb06f3-837f-42ed-a6f5-90436ca62e06 (wsId=32fb06f3-837f-42ed-a6f5-90436ca62e06)
+[2026-03-13T19:52:51.920Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/items -> 400
+[2026-03-13T19:52:51.954Z] [INFO ] [APP         ] [Interceptor] LOCAL-FIRST: POST /api/item-availability/decrement -> 200 [mode=yellow]
+[2026-03-13T19:52:51.986Z] [ERROR] [APP         ] [R:POS:AddItem] Failed to add item Frozen Banana: 400: {"error":"NOT NULL constraint failed: check_items.total_price"}
+[2026-03-13T19:52:51.990Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/item-availability
+[2026-03-13T19:52:51.995Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/item-availability/increment
+[2026-03-13T19:52:52.000Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/item-availability -> 200
+[2026-03-13T19:52:52.007Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/payments
+[2026-03-13T19:52:52.012Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/service-charges
+[2026-03-13T19:52:52.018Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/item-availability
+[2026-03-13T19:52:52.023Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/item-availability/increment -> 404
+[2026-03-13T19:52:52.025Z] [WARN ] [APP         ] [Interceptor] YELLOW->RED fallback: CAPS returned 404 for POST /api/item-availability/increment
+[2026-03-13T19:52:52.028Z] [INFO ] [APP         ] [Interceptor] RED mode -> local: POST /api/item-availability/increment
+[2026-03-13T19:52:52.030Z] [INFO ] [APP         ] [Interceptor] OFFLINE -> POST /api/item-availability/increment -> 202
+[2026-03-13T19:52:52.034Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/payments -> 200
+[2026-03-13T19:52:52.043Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/service-charges -> 500
+[2026-03-13T19:52:52.047Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/item-availability -> 200
+[2026-03-13T19:52:52.278Z] [ERROR] [APP         ] [R:RENDERER:WebSocket error, closing connect] 
+[2026-03-13T19:52:52.282Z] [WARN ] [APP         ] [R:RENDERER:WebSocket disconnected, will rec] 
+[2026-03-13T19:52:53.182Z] [INFO ] [APP         ] [Interceptor] Service host URL set: http://127.0.0.1:3001
+[2026-03-13T19:52:54.296Z] [INFO ] [APP         ] [R:RENDERER:Connecting to wss://7c25787c-567] 
+[2026-03-13T19:52:55.997Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:52:55.995Z] [DEBUG] [ServiceHost:TransactionSync][0m Circuit breaker OPEN, skipping sync (retry in 50s)
+[2026-03-13T19:52:56.512Z] [INFO ] [OFFLINEDB   ] [Sync] Forwarding 1 non-check operation(s) to CAPS...
+[2026-03-13T19:52:56.530Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Request: POST /api/caps/sync/queue-operation from SNS-001-WS01 (wsId=32fb06f3-837f-42ed-a6f5-90436ca62e06)
+[2026-03-13T19:52:56.541Z] [INFO ] [OFFLINEDB   ] [Sync] CAPS sync results: 0 synced, 1 failed, 2 pending
+[2026-03-13T19:52:56.549Z] [INFO ] [APP         ] [Sync] CAPS sync: 0 synced, 1 failed, 2 pending, 7 permanently failed
+[2026-03-13T19:52:56.866Z] [INFO ] [PRINT       ] [Connect] Connecting to wss://7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev/ws/print-agents
+[2026-03-13T19:52:56.878Z] [ERROR] [PRINT       ] [Connect] WebSocket error: getaddrinfo ENOTFOUND 7c25787c-567d-4d98-8151-1125794025a5-00-o90cqt9u859u.spock.replit.dev
+[2026-03-13T19:52:56.885Z] [INFO ] [PRINT       ] [Connect] Disconnected (code: 1006)
+[2026-03-13T19:52:56.891Z] [INFO ] [PRINT       ] [Status] connected=false, auth=false
+[2026-03-13T19:52:56.897Z] [INFO ] [PRINT       ] [Connect] Reconnecting in 30s (attempt 6)
+[2026-03-13T19:52:57.356Z] [ERROR] [APP         ] [R:RENDERER:WebSocket error, closing connect] 
+[2026-03-13T19:52:57.361Z] [WARN ] [APP         ] [R:RENDERER:WebSocket disconnected, will rec] 
+[2026-03-13T19:52:59.009Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/sync-notifications
+[2026-03-13T19:52:59.025Z] [INFO ] [APP         ] [Interceptor] LOCAL-FIRST: POST /api/system-status/workstation/heartbeat -> 200 [mode=yellow]
+[2026-03-13T19:52:59.040Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/sync-notifications/unread-count
+[2026-03-13T19:52:59.051Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/sync-notifications -> 404
+[2026-03-13T19:52:59.053Z] [WARN ] [APP         ] [Interceptor] YELLOW->RED fallback: CAPS returned 404 for GET /api/sync-notifications
+[2026-03-13T19:52:59.056Z] [INFO ] [APP         ] [Interceptor] RED mode -> local: GET /api/sync-notifications
+[2026-03-13T19:52:59.061Z] [INFO ] [APP         ] [Interceptor] OFFLINE -> GET /api/sync-notifications -> 200
+[2026-03-13T19:52:59.069Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/sync-notifications/unread-count -> 404
+[2026-03-13T19:52:59.072Z] [WARN ] [APP         ] [Interceptor] YELLOW->RED fallback: CAPS returned 404 for GET /api/sync-notifications/unread-count
+[2026-03-13T19:52:59.074Z] [INFO ] [APP         ] [Interceptor] RED mode -> local: GET /api/sync-notifications/unread-count
+[2026-03-13T19:52:59.077Z] [INFO ] [APP         ] [Interceptor] OFFLINE -> GET /api/sync-notifications/unread-count -> 200
+[2026-03-13T19:52:59.096Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/health
+[2026-03-13T19:52:59.101Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/health -> 404
+[2026-03-13T19:52:59.104Z] [WARN ] [APP         ] [Interceptor] YELLOW->RED fallback: CAPS returned 404 for GET /api/health
+[2026-03-13T19:52:59.106Z] [INFO ] [APP         ] [Interceptor] RED mode -> local: GET /api/health
+[2026-03-13T19:52:59.109Z] [INFO ] [APP         ] [Interceptor] OFFLINE -> GET /api/health -> 200
+[2026-03-13T19:52:59.364Z] [INFO ] [APP         ] [R:RENDERER:Connecting to wss://7c25787c-567] 
+[2026-03-13T19:53:00.998Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:53:00.995Z] [DEBUG] [ServiceHost:TransactionSync][0m Circuit breaker OPEN, skipping sync (retry in 45s)
+[2026-03-13T19:53:01.207Z] [INFO ] [APP         ] [Interceptor] Service host URL set: http://127.0.0.1:3001
+[2026-03-13T19:53:01.514Z] [DEBUG] [OFFLINEDB   ] [Sync] 2 non-check op(s) waiting for backoff retry
+[2026-03-13T19:53:02.428Z] [ERROR] [APP         ] [R:RENDERER:WebSocket error, closing connect] 
+[2026-03-13T19:53:02.435Z] [WARN ] [APP         ] [R:RENDERER:WebSocket disconnected, will rec] 
+[2026-03-13T19:53:04.435Z] [INFO ] [APP         ] [R:RENDERER:Connecting to wss://7c25787c-567] 
+[2026-03-13T19:53:06.005Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:53:06.002Z] [DEBUG] [ServiceHost:TransactionSync][0m Circuit breaker OPEN, skipping sync (retry in 40s)
+[2026-03-13T19:53:06.518Z] [DEBUG] [OFFLINEDB   ] [Sync] 2 non-check op(s) waiting for backoff retry
+[2026-03-13T19:53:07.302Z] [DEBUG] [APP         ] [R:POS:SendCheck] Sending check with workstationId: 32fb06f3-837f-42ed-a6f5-90436ca62e06
+[2026-03-13T19:53:07.314Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/send
+[2026-03-13T19:53:07.338Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Request: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/send from 32fb06f3-837f-42ed-a6f5-90436ca62e06 (wsId=32fb06f3-837f-42ed-a6f5-90436ca62e06)
+[2026-03-13T19:53:07.356Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/send -> 200
+[2026-03-13T19:53:07.400Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/unlock
+[2026-03-13T19:53:07.408Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Request: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/unlock from 32fb06f3-837f-42ed-a6f5-90436ca62e06 (wsId=32fb06f3-837f-42ed-a6f5-90436ca62e06)
+[2026-03-13T19:53:07.412Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/payments
+[2026-03-13T19:53:07.418Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/unlock
+[2026-03-13T19:53:07.424Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/service-charges
+[2026-03-13T19:53:07.429Z] [INFO ] [APP         ] [Interceptor] LOCAL-FIRST: POST /api/system-status/workstation/heartbeat -> 200 [mode=yellow]
+[2026-03-13T19:53:07.433Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/unlock -> 200
+[2026-03-13T19:53:07.440Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/auth/offline-employees
+[2026-03-13T19:53:07.445Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/payments -> 200
+[2026-03-13T19:53:07.449Z] [INFO ] [APP         ] [ServiceHost] [CAPS] Request: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/unlock from 32fb06f3-837f-42ed-a6f5-90436ca62e06 (wsId=32fb06f3-837f-42ed-a6f5-90436ca62e06)
+[2026-03-13T19:53:07.452Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: POST /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/unlock -> 200
+[2026-03-13T19:53:07.456Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/checks/975b6da8-25a2-4f91-929d-5a97b20de220/service-charges -> 500
+[2026-03-13T19:53:07.462Z] [ERROR] [APP         ] [R:RENDERER:WebSocket error, closing connect] 
+[2026-03-13T19:53:07.465Z] [INFO ] [APP         ] [R:RENDERER:Stale socket closed (connId=11, ] 
+[2026-03-13T19:53:07.469Z] [INFO ] [APP         ] [Interceptor] YELLOW mode -> CAPS: GET /api/auth/offline-employees -> 200
+[2026-03-13T19:53:09.215Z] [INFO ] [APP         ] [Interceptor] Service host URL set: http://127.0.0.1:3001
+[2026-03-13T19:53:11.008Z] [INFO ] [APP         ] [ServiceHost] [90m[2026-03-13T19:53:11.006Z] [DEBUG] [ServiceHost:TransactionSync][0m Circuit breaker OPEN, skipping sync (retry in 35s)
+[2026-03-13T19:53:11.528Z] [DEBUG] [OFFLINEDB   ] [Sync] 2 non-check op(s) waiting for backoff retry
