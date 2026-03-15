@@ -1807,9 +1807,12 @@ class OfflineDatabase {
         }
         return true;
       });
-      if (eligibleOps.length > 0) {
+      if (nonCheckOps.length === 0) {
+        this._lastBackoffLogCount = -1;
+      } else if (eligibleOps.length > 0) {
         offlineDbLogger.info('Sync', `Forwarding ${eligibleOps.length} non-check operation(s) to CAPS...`);
-      } else if (nonCheckOps.length > 0 && nonCheckOps.length !== this._lastBackoffLogCount) {
+        this._lastBackoffLogCount = -1;
+      } else if (nonCheckOps.length !== this._lastBackoffLogCount) {
         offlineDbLogger.debug('Sync', `${nonCheckOps.length} non-check op(s) waiting for backoff retry`);
         this._lastBackoffLogCount = nonCheckOps.length;
       }

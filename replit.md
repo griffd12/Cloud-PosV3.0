@@ -67,6 +67,7 @@ Never fix a single symptom in isolation. Always trace the full impact chain.
 - **Check Lock Cleanup**: POS page now releases check locks on `beforeunload` (via `sendBeacon`) and component unmount to prevent lock leaks on navigation.
 - **Inactivity Logout Guard**: Inactivity logout timer is paused when the payment modal is open to avoid logging out during active transactions.
 - **Order Device Routing Guard**: Workstation form prevents saving before order device routing data has loaded, avoiding accidental wipe of existing routing assignments.
+- **Offline Sync Retry Storm (v3.1.53)**: Legacy `syncOfflineData()` in `main.cjs` is now gated behind `!enhancedOfflineDb` to prevent duplicate sync paths. HTTP 400/404/422 responses are treated as permanent failures (no retry). Stale operations (>24h) are auto-expired on first sync cycle. Backoff log spam is suppressed to only emit on count change. `/api/item-availability/increment` added to `LOCAL_FIRST_WRITE_PATTERNS`. CAPS `queue-operation` endpoint derives `type` from endpoint when missing.
 
 ## External Dependencies
 

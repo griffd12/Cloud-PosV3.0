@@ -2291,15 +2291,20 @@ export function createApiRoutes(
       if (!db) {
         return res.status(503).json({ error: 'Database not available' });
       }
-      const { path: opPath, body, headers } = req.body;
+      const { body, headers } = req.body;
+      const opPath = req.body.path || req.body.endpoint;
       const method = req.body.method || 'POST';
+      let opType = req.body.type;
       if (!opPath) {
-        return res.status(400).json({ error: 'path is required' });
+        return res.status(400).json({ error: 'path or endpoint is required' });
+      }
+      if (!opType) {
+        opType = opPath.replace(/^\/api\//, '').replace(/\//g, '-') || 'unknown';
       }
 
       const id = `op_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
       db.run(`INSERT INTO sync_queue (id, operation_type, method, path, body, headers, status, created_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`, [
-        id, 'generic', method, opPath,
+        id, opType, method, opPath,
         typeof body === 'string' ? body : JSON.stringify(body || null),
         typeof headers === 'string' ? headers : JSON.stringify(headers || null),
         new Date().toISOString(),

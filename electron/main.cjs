@@ -3276,7 +3276,9 @@ async function initAllServices() {
   scheduleConnectivityCheck();
   checkConnectivity();
 
-  syncTimer = setInterval(syncOfflineData, 60000);
+  if (!enhancedOfflineDb) {
+    syncTimer = setInterval(syncOfflineData, 60000);
+  }
   startBackgroundSyncWorker();
 
   dataSyncInterval = setInterval(async () => {
