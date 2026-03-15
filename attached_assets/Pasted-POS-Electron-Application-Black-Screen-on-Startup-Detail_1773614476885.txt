@@ -1,0 +1,413 @@
+POS Electron Application – Black Screen on Startup
+Detailed Engineering Bug Report
+System
+
+OnPoint POS – Electron Terminal Application
+
+Version
+
+3.1.53
+
+Environment
+
+Development environment
+
+OS: Windows
+
+POS Terminal: Electron Application
+
+Backend: DEV database (Replit hosted)
+
+Local services:
+
+CAPS service host
+
+Offline SQLite database
+
+Print agent
+
+Testing involved both:
+
+Connected mode (DEV DB running)
+
+Offline mode (DEV DB not running)
+
+Summary
+
+The Electron POS application intermittently launches into a black screen state where the POS UI never becomes usable.
+
+The backend services successfully initialize, cloud connectivity may succeed, and the Electron window reports "Page loaded successfully", but the renderer never transitions into the login screen or interactive POS state.
+
+This occurs even when:
+
+backend sync succeeds
+
+service host initializes
+
+cloud connectivity is healthy
+
+the application version is current
+
+The issue appears to occur between renderer load completion and UI initialization, indicating a frontend bootstrap failure or renderer state initialization issue.
+
+Test Sequence Performed
+Phase 1 – Clean Start with DEV DB
+
+Steps:
+
+Deleted all logs.
+
+Started DEV database.
+
+Launched Electron POS app.
+
+Observed behavior:
+
+First two launches produced black screen.
+
+Third launch successfully displayed login screen.
+
+Login worked.
+
+Transactions were entered successfully.
+
+Application closed normally.
+
+Logs were marked with ==== to indicate end of this session.
+
+Phase 2 – Offline Boot Test
+
+Steps:
+
+Closed application.
+
+Rebooted PC.
+
+Did NOT start DEV environment.
+
+Launched POS application.
+
+Observed behavior:
+
+POS launched
+
+Screen remained black
+
+No login screen
+
+After 4 minutes application remained black
+
+No interaction possible
+
+Expected Behavior
+
+When the POS launches:
+
+Electron shell loads
+
+Renderer initializes
+
+Login screen appears
+
+POS becomes interactive
+
+If the cloud DEV DB is unavailable:
+
+Application should detect cloud unavailable
+
+Local CAPS service host should initialize
+
+Offline SQLite DB should load
+
+Cached POS assets should load
+
+POS should allow transactions offline
+
+Actual Behavior
+
+Electron window loads but UI never becomes interactive.
+
+Sequence observed in logs:
+
+App starts normally
+
+Cloud DB probe succeeds
+
+Activation config retrieved
+
+Initial sync completes
+
+Service host starts
+
+Window reports Page loaded successfully
+
+Renderer never reaches login state
+
+POS remains black
+
+No subsequent logs show:
+
+login attempt
+
+POS heartbeat
+
+check creation
+
+POS route rendering
+
+Log Evidence
+Application Version
+
+Application updated successfully to version 3.1.53.
+
+Evidence:
+
+Updater log shows latest version detected and installed.
+
+Backend Startup Successful
+
+Startup sequence shows normal backend initialization.
+
+Evidence:
+
+DB probe success
+
+activation config retrieved
+
+initial sync executed
+
+56 tables synced
+
+service host started on port 3001
+
+Cloud Connectivity Confirmed
+
+Cloud connectivity was healthy during failing run.
+
+Evidence shows:
+
+successful cloud WebSocket connection
+
+successful authentication
+
+configuration sync
+
+This confirms the black screen is not caused by cloud outage.
+
+Service Host Initialization
+
+Local service host started successfully.
+
+Evidence:
+
+service host ready
+
+listening on port 3001
+
+endpoints registered
+
+Offline Database Initialization
+
+Offline SQLite database loads successfully.
+
+Log shows database initialization completed without fatal error.
+
+Encryption disabled but not related to current issue.
+
+Window Load Event
+
+Electron window reports successful page load.
+
+Log entry:
+
+Page loaded successfully
+
+However the renderer never transitions to login state.
+
+Critical Symptom
+
+After the page load event:
+
+No further renderer activity occurs.
+
+Missing events include:
+
+login rendering
+
+user authentication
+
+workstation heartbeat
+
+POS UI interaction
+
+Instead logs begin showing PageCache write failures.
+
+Cache Layer Errors
+
+During failing run, repeated errors occur while writing cached assets.
+
+Example entries:
+
+Cache write error ... The operation was aborted
+
+Affected components include:
+
+POS components
+
+admin pages
+
+UI modules
+
+Examples of affected files:
+
+menu-item-grid.tsx
+
+check-panel.tsx
+
+modifier-modal.tsx
+
+These errors appear after page load, suggesting the renderer bootstrap may be failing during asset caching or component initialization.
+
+Renderer WebSocket Instability
+
+Even during successful runs, renderer WebSocket logs show instability:
+
+Examples:
+
+stale socket closures
+
+reconnect attempts
+
+The system recovers in successful runs but may contribute to startup race conditions.
+
+Printer Issue (Separate)
+
+Printer subsystem logs show:
+
+OpenPrinter failed error 1801
+
+Printer:
+
+Star TSP100 CUTTER (TSP143)
+
+This is unrelated to the black screen but indicates a Windows spooler configuration issue.
+
+Observed Pattern
+
+Three startup behaviors observed:
+
+Launch Attempt	Result
+Attempt 1	Black screen
+Attempt 2	Black screen
+Attempt 3	POS works normally
+Subsequent boot	Black screen
+
+This suggests a race condition or renderer initialization failure rather than a deterministic failure.
+
+Likely Root Cause Areas
+
+Based on logs, failure likely occurs in renderer initialization.
+
+Possible causes:
+
+Renderer bootstrap failure
+
+React application may be throwing an exception during initialization.
+
+Provider initialization failure
+
+Application state providers (auth, config, POS context) may not resolve correctly.
+
+Cached asset corruption
+
+PageCache write aborts suggest caching layer may be unstable.
+
+Startup race condition
+
+Renderer may be attempting to load data before state is initialized.
+
+Router guard failure
+
+Application routing may stall before reaching login route.
+
+What Is NOT Failing
+
+The following systems are confirmed working:
+
+Electron shell
+
+offline SQLite database
+
+service host startup
+
+cloud connectivity
+
+configuration sync
+
+transaction engine (during successful runs)
+
+Therefore the issue is not backend infrastructure related.
+
+Suspected Failure Location
+
+Failure occurs between:
+
+Electron Window Loaded
+        ↓
+React App Bootstrap
+        ↓
+POS Login Route Rendering
+
+The renderer appears to stop during bootstrap.
+
+Investigation Required
+
+Developers should investigate the renderer boot sequence.
+
+Key areas:
+
+React initialization
+
+application providers
+
+router initialization
+
+cached asset loading
+
+offline bootstrap logic
+
+PageCache write mechanism
+
+Recommended Debug Actions
+
+Add logging around renderer initialization.
+
+Specifically:
+
+React bootstrap start
+
+provider initialization
+
+route rendering
+
+login component render
+
+fatal renderer exceptions
+
+Also capture:
+
+Electron renderer console errors.
+
+Priority
+
+High.
+
+Issue prevents POS from starting reliably and blocks terminal operation.
+
+Impact
+
+POS cannot be used when black screen occurs.
+
+Requires multiple restarts to recover.
+
+This would be unacceptable in production POS deployments.

@@ -1,0 +1,38 @@
+#5 - Fix Offline Transactions (v3.1.54)
+What & Why
+When the cloud returns HTTP 502/503/504 (gateway errors), the Electron protocol interceptor passes those error responses directly to the frontend instead of falling back to CAPS or the offline handler. This means all check/transaction operations fail during the GREEN→YELLOW transition window, and even after YELLOW is established, any non-local-first API call that happens to hit the cloud first will get a 5xx and break.
+
+Root cause: the interceptor's cloud fetch at line ~2989 treats 502/503/504 as "successful" HTTP responses (they resolve the Promise, so they don't trigger the catch block). Only network-level failures (DNS errors, timeouts, connection refused) trigger the CAPS/offline fallback path.
+
+Additionally, POST /api/checks and other check-mutation endpoints are NOT in LOCAL_FIRST_WRITE_PATTERNS, so in GREEN mode they go to the cloud first. When the cloud is degraded (502/503), transactions immediately fail for the user with no fallback.
+
+Done looks like
+When the cloud returns 502, 503, or 504 for any API request, the interceptor automatically falls back to CAPS (YELLOW) or the offline handler (RED) — the frontend never sees a 5xx gateway error.
+Check creation, item adding, sending to kitchen, and payments all succeed even when the cloud is completely unreachable, as long as CAPS or the offline DB is available.
+The mode transition from GREEN to YELLOW happens faster (the first 5xx API response triggers an immediate connectivity check rather than waiting for the next periodic probe).
+YELLOW mode log flood is reduced: repeated "Cloud not connected, skipping sync" messages from TransactionSync are suppressed after the first occurrence per disconnection episode.
+All changes applied to BOTH electron/main.cjs AND electron/service-host-embedded.cjs.
+Out of scope
+Making POST /api/checks fully local-first (changing it from cloud-first to offline-first in GREEN mode) — this would change the check ID generation strategy and requires broader testing.
+Printer/print agent issues (deferred per user request).
+Page cache write failures for .tsx assets (dev-only issue, not relevant to production builds).
+Cold-start offline boot (frontend loading from bundled assets when cloud is completely down from app launch) — this works in production builds but not dev mode.
+Tasks
+Treat 5xx cloud responses as network failures — In the protocol handler's cloud fetch success path, check if the response status is 502/503/504 for API requests. If so, throw the response into the catch block so the CAPS/offline fallback path is activated. This ensures no 5xx gateway error is ever passed to the frontend.
+
+Accelerate mode transition on 5xx — When a 5xx triggers the fallback, immediately call checkConnectivity() (async, non-blocking) so the global mode switches to YELLOW/RED faster, rather than waiting for the next periodic probe cycle.
+
+Suppress YELLOW mode TransactionSync log flood — Add a flag that tracks the last-known cloud connection state in the TransactionSync worker. Only log "Cloud not connected, skipping sync" on the first occurrence per disconnection episode, then suppress until the cloud reconnects.
+
+Apply all changes to the embedded CJS runtime — Mirror every change from electron/main.cjs into electron/service-host-embedded.cjs, and verify the TransactionSync log suppression in service-host/src/services/transaction-sync.ts as well.
+
+Bump version to 3.1.54 — Update version in package.json, electron/electron-builder.json, and create electron/RELEASE_NOTES_v3.1.54.md.
+
+Relevant files
+electron/main.cjs:2810-3178
+electron/main.cjs:44-59
+electron/main.cjs:40-42
+electron/service-host-embedded.cjs
+service-host/src/services/transaction-sync.ts
+electron/electron-builder.json
+package.json
