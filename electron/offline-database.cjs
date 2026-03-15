@@ -1320,6 +1320,22 @@ class OfflineDatabase {
     }
   }
 
+  getOfflineTimePunches(employeeId) {
+    try {
+      if (this.usingSqlite) {
+        let query = 'SELECT data FROM offline_time_punches WHERE 1=1';
+        const params = [];
+        if (employeeId) { query += ' AND employee_id = ?'; params.push(employeeId); }
+        query += ' ORDER BY created_at DESC LIMIT 10';
+        return this.db.prepare(query).all(...params).map(r => JSON.parse(r.data));
+      }
+      return [];
+    } catch (e) {
+      offlineDbLogger.error('TimePunch', 'Get time punches error', e.message);
+      return [];
+    }
+  }
+
   saveOfflineTimePunch(punch) {
     try {
       if (this.usingSqlite) {

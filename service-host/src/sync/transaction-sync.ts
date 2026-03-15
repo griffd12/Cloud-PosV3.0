@@ -23,6 +23,7 @@ export class TransactionSync {
   private isProcessing: boolean = false;
   private consecutiveFailures: number = 0;
   private maxConsecutiveFailures: number = 10;
+  private lastCloudDisconnectLogged: boolean = false;
   
   constructor(db: Database, cloud: CloudConnection) {
     this.db = db;
@@ -53,8 +54,16 @@ export class TransactionSync {
   
   private async processQueue(): Promise<void> {
     if (!this.cloud.isConnected()) {
-      logger.debug('Cloud not connected, skipping sync');
+      if (!this.lastCloudDisconnectLogged) {
+        logger.debug('Cloud not connected, skipping sync (will suppress until reconnect)');
+        this.lastCloudDisconnectLogged = true;
+      }
       return;
+    }
+    
+    if (this.lastCloudDisconnectLogged) {
+      logger.info('Cloud reconnected, resuming sync');
+      this.lastCloudDisconnectLogged = false;
     }
     
     if (this.isProcessing) {

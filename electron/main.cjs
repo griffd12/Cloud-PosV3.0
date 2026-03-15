@@ -56,6 +56,20 @@ const LOCAL_FIRST_WRITE_PATTERNS = [
   /^\/api\/system-status/,
   /^\/api\/gift-cards(\/|$)/,
   /^\/api\/loyalty(\/|$)/,
+  /^\/api\/checks(\/|$)/,
+  /^\/api\/checks\/[^/]+\/items(\/|$)/,
+  /^\/api\/checks\/[^/]+\/send(\/|$)/,
+  /^\/api\/checks\/[^/]+\/payments?(\/|$)/,
+  /^\/api\/checks\/[^/]+\/discount(\/|$)/,
+  /^\/api\/checks\/[^/]+\/void(\/|$)/,
+  /^\/api\/checks\/[^/]+\/lock(\/|$)/,
+  /^\/api\/checks\/[^/]+\/unlock(\/|$)/,
+  /^\/api\/checks\/[^/]+\/close(\/|$)/,
+  /^\/api\/checks\/[^/]+\/print(\/|$)/,
+  /^\/api\/checks\/[^/]+\/service-charges?(\/|$)/,
+  /^\/api\/pos\/capture-with-tip(\/|$)/,
+  /^\/api\/pos\/record-external-payment(\/|$)/,
+  /^\/api\/pos\/loyalty\/earn(\/|$)/,
 ];
 
 function isLocalFirstWrite(method, pathname) {
@@ -2991,6 +3005,13 @@ function registerProtocolInterceptor() {
         new Promise((_, reject) => setTimeout(() => reject(new Error('Protocol fetch timeout (4s)')), 4500)),
       ]);
 
+      if (response.status === 502 || response.status === 503 || response.status === 504) {
+        appLogger.warn('Interceptor', `Cloud returned ${response.status} for ${request.method} ${url.pathname} — treating as network failure`);
+        response.body?.cancel().catch(() => {});
+        checkConnectivity().catch(() => {});
+        throw new Error(`Cloud gateway error (HTTP ${response.status})`);
+      }
+
       if (response.ok && request.method === 'GET' && !isApiRequest) {
         const cloned = response.clone();
         cacheResponseToDisk(url.pathname, cloned).catch(() => {});
@@ -3274,7 +3295,7 @@ async function initAllServices() {
     }, interval);
   }
   scheduleConnectivityCheck();
-  checkConnectivity();
+  await checkConnectivity();
 
   if (!enhancedOfflineDb) {
     syncTimer = setInterval(syncOfflineData, 60000);

@@ -216,19 +216,24 @@ class OfflineApiInterceptor {
     }
 
     if (pathname.match(/^\/api\/break-rules/)) {
-      return { status: 200, data: [] };
+      const breakRules = this.db.getEntityList('break_rules', this.config.enterpriseId);
+      return { status: 200, data: breakRules || [] };
     }
 
     const timePunchStatusMatch = pathname.match(/^\/api\/time-punches\/status\/([^/]+)$/);
     if (timePunchStatusMatch) {
+      const employeeId = timePunchStatusMatch[1];
+      const punches = this.db.getOfflineTimePunches ? this.db.getOfflineTimePunches(employeeId) : [];
+      const lastPunch = punches.length > 0 ? punches[0] : null;
+      const isClockedIn = lastPunch ? (lastPunch.punchType === 'clock_in' || lastPunch.punch_type === 'clock_in') : true;
       return {
         status: 200,
         data: {
-          status: 'clocked_in',
-          isClockedIn: true,
-          lastPunch: null,
+          status: isClockedIn ? 'clocked_in' : 'clocked_out',
+          isClockedIn,
+          lastPunch: lastPunch || null,
           activeBreak: null,
-          clockedInAt: new Date().toISOString(),
+          clockedInAt: lastPunch && isClockedIn ? (lastPunch.createdAt || lastPunch.created_at || new Date().toISOString()) : (isClockedIn ? new Date().toISOString() : null),
           todayTimecard: null,
         },
       };
@@ -248,9 +253,20 @@ class OfflineApiInterceptor {
       };
     }
 
-    const jobCodesDetailsMatch = pathname.match(/^\/api\/employees\/[^/]+\/job-codes\/details$/);
+    const jobCodesDetailsMatch = pathname.match(/^\/api\/employees\/([^/]+)\/job-codes\/details$/);
     if (jobCodesDetailsMatch) {
-      return { status: 200, data: [] };
+      const employeeId = jobCodesDetailsMatch[1];
+      const allJobCodes = this.db.getEntityList('job_codes', this.config.enterpriseId);
+      const assignments = this.db.getEntityList('employee_assignments', this.config.enterpriseId);
+      const empAssignments = assignments.filter(a => a.employeeId === employeeId || a.employee_id === employeeId);
+      if (empAssignments.length > 0) {
+        const assignedJobCodeIds = empAssignments
+          .map(a => a.jobCodeId || a.job_code_id)
+          .filter(Boolean);
+        const empJobCodes = allJobCodes.filter(jc => assignedJobCodeIds.includes(jc.id));
+        return { status: 200, data: empJobCodes.length > 0 ? empJobCodes : allJobCodes };
+      }
+      return { status: 200, data: allJobCodes || [] };
     }
 
     if (pathname === '/api/terminal-devices' || pathname.match(/^\/api\/terminal-devices/)) {
@@ -375,7 +391,8 @@ class OfflineApiInterceptor {
     }
 
     if (pathname === '/api/item-availability' || pathname.match(/^\/api\/item-availability/)) {
-      return { status: 200, data: [] };
+      const availability = this.db.getEntityList('item_availability', this.config.enterpriseId);
+      return { status: 200, data: availability || [] };
     }
 
     if (pathname === '/api/checks/open') {
