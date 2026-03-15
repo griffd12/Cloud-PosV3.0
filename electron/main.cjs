@@ -480,7 +480,8 @@ function startBackgroundSyncWorker() {
   appLogger.info('Sync', 'Background sync worker started (5s interval, syncs to CAPS in GREEN/YELLOW)');
 }
 
-async function checkConnectivity() {
+async function checkConnectivity(options = {}) {
+  const forceImmediate = options.forceImmediate || false;
   checkLocalDbHealth();
 
   if (!localDbHealthy) {
@@ -562,7 +563,7 @@ async function checkConnectivity() {
     connectivitySuccessCount = 0;
     connectivityFailCount++;
     
-    if (connectionMode === 'green' && connectivityFailCount < HYSTERESIS_THRESHOLD) {
+    if (!forceImmediate && connectionMode === 'green' && connectivityFailCount < HYSTERESIS_THRESHOLD) {
       appLogger.info('Network', `Cloud unreachable (${connectivityFailCount}/${HYSTERESIS_THRESHOLD} failures) — waiting before switching mode`);
       return;
     }
@@ -3157,7 +3158,7 @@ function registerProtocolInterceptor() {
                 setConnectionMode('yellow');
                 if (offlineInterceptor) offlineInterceptor.setConnectionMode('yellow');
               } else {
-                appLogger.debug('Interceptor', `Startup grace: suppressing yellow mode downgrade for ${url.pathname}`);
+                appLogger.debug('Interceptor', `Startup grace: serving via CAPS but suppressing yellow mode downgrade for ${url.pathname}`);
               }
               return new Response(capsResponse.body, {
                 status: capsResponse.status,
@@ -3171,7 +3172,7 @@ function registerProtocolInterceptor() {
               setConnectionMode('red');
               if (offlineInterceptor) offlineInterceptor.setConnectionMode('red');
             } else {
-              appLogger.debug('Interceptor', `Startup grace: suppressing red mode downgrade (CAPS unreachable: ${capsErr.message})`);
+              appLogger.debug('Interceptor', `Startup grace: CAPS unreachable (${capsErr.message}), using offline handler`);
             }
           }
         } else {
@@ -3181,7 +3182,7 @@ function registerProtocolInterceptor() {
           }
         }
 
-        if (offlineInterceptor && failoverClone && !inGracePeriod) {
+        if (offlineInterceptor && failoverClone) {
           appLogger.info('Interceptor', `RED FAILOVER: ${request.method} ${url.pathname}`);
           const body = await parseRequestBody(failoverClone);
           return routeToOfflineInterceptor(request.method, url, body);
@@ -3295,7 +3296,7 @@ async function initAllServices() {
     }, interval);
   }
   scheduleConnectivityCheck();
-  await checkConnectivity();
+  await checkConnectivity({ forceImmediate: true });
 
   if (!enhancedOfflineDb) {
     syncTimer = setInterval(syncOfflineData, 60000);
